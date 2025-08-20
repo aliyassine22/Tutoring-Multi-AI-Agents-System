@@ -1,0 +1,8 @@
+.env
+Externals/
+Courses
+Rag/db
+.venv
+__pycache__
+credentials.json
+token.json
