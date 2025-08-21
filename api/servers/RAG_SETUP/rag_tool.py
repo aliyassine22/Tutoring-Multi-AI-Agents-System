@@ -4,7 +4,7 @@ from langchain_core.tools import StructuredTool
 from . import rag
 from pathlib import Path
 
-base_dir = Path(__file__).resolve().parent.parent.parent
+base_dir = Path(__file__).resolve().parent.parent.parent.parent
 course_path = base_dir / "Courses" / "signals and systems"
 rag_tool = rag.RAGSearchTool(default_course_path=course_path)
 
@@ -50,12 +50,11 @@ Respond with STRICT JSON ONLY:
 You are given syllabus text with topic headers (e.g., "Fourier Series", "Fourier Transform", etc.)
 followed by their lecture numbers.
 
-Task: return the lecture numbers for topic: "{topic}"
+Task: return the lecture numbers for the given topic: "{topic}"
 
 Rules:
 - Work ONLY inside the 'Course Outline' section.
-- Match the topic case-insensitively to a header or its aliases.
-- AFTER the matched header, collect only the lecture numbers that belong to that section,
+- Collect only the lecture numbers that belong to that section,
   stopping at the next topic header. Ignore any numbers that appear BEFORE the header.
 - If multiple chunks are retrieved, merge/deduplicate numbers.
 - If no clear match, return NONE.
@@ -80,7 +79,7 @@ NOTE: <<=120 chars brief reason or closest phrasing>
     lec_min = None
     lec_max = None
     if lectures and len(lectures) > 0:
-        try: 
+        try:
             lec_min = min(lectures)
             lec_max= max(lectures)
         except Exception as e:
@@ -88,12 +87,14 @@ NOTE: <<=120 chars brief reason or closest phrasing>
 
     header = f"TOPIC: {topic}\nSCOPE: {scope.upper()}\nFORMAT: Up to {k} terse lines.\n" \
              f"Each line: - Lecture=<N or ?> | Chapter=<N or ?> | <filename> | page=<n> | relpath=<p> | snippet: <≤120 chars>"
-    guide = "If a lecture hint is provided, prefer that lecture; otherwise choose best matches."
+    guide = "If a lecture hint is provided, prefer that lecture, otherwise choose best matches."
     prompt = f"{header}\n{guide}"
 
-    text = rag_tool._run(query=prompt, category=scope, lecture_min=lec_min,lecture_max=lec_max, k=k)
+    text = rag_tool._run(query=prompt, category=scope, lectures=lectures, k=k)
     return ListingsOut(text=str(text)).model_dump()
 
+
+## useless
 probe_topic = StructuredTool.from_function(
     name="probe_topic",
     description=("Educated probe over course corpora.\n"

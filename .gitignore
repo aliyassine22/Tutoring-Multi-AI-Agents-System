@@ -6,3 +6,4 @@ Rag/db
 __pycache__
 credentials.json
 token.json
+RAG/RAG_tests_db

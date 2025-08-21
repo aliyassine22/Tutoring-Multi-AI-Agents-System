@@ -34,15 +34,25 @@ from google.genai import types
 
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, SseConnectionParams, StdioConnectionParams, StdioServerParameters
 MCP = SseConnectionParams(url="http://127.0.0.1:8787/sse") # must add /sse
-tool= MCPToolset(connection_params=MCP, tool_filter=["draf_email"])
+draft_email= MCPToolset(connection_params=MCP, tool_filter=["draf_email"])
+calendar_tools= MCPToolset(connection_params=MCP, tool_filter=["scrape_calendar", "update_calendar", "cancel_event", "create_calendar_event"])
 
-agent  = Agent(
+gmail_agent  = Agent(
     model='gemini-2.0-flash',
     name="google_gmail_drafter",
     description=("Handles Gmail tasks like drafting emails."),
     instruction=("You handle queries related to Gmail. Do not ask any followup questions related to user ids, gmail ids etc. You don't need to know the actual email address or user ID if you're making requests on behalf of the logged-in user. Use the available tools to fulfill the user's request. If you encounter an error, provide the *exact* error message so the user can debug."),
-    tools=[tool]
+    tools=[draft_email]
 )
+
+calendar_agent  = Agent(
+    model='gemini-2.0-flash',
+    name="google_calendar_agent",
+    description="Handles Calendar tasks like listing events, creating events, and getting event details.",
+    instruction="You handle queries related to Google Calendar. Never ask user to provide the calendarId, users's main Google Calendar ID is usually just 'primary'. Use the available tools to fulfill the user's request. If you encounter an error, provide the *exact* error message so the user can debug.",
+    tools=[calendar_tools]
+)
+
 prime_agent = RemoteA2aAgent(
     name="tutoring_session_designer",
     description="Agent that design tutoring sessions.",
@@ -73,7 +83,7 @@ root_agent  = Agent(
                 Do not confirm the plan's contents. Do not describe the plan. Your only function after receiving the plan is to state that you have it and then immediately call the email tool. Treat the plan data as a hot potato you must pass to the email tool without looking at it.
 
                 """),
-    sub_agents=[ prime_agent, agent],
+    sub_agents=[ prime_agent, gmail_agent, calendar_agent],
     generate_content_config=types.GenerateContentConfig(
         safety_settings=[
             types.SafetySetting(  # avoid false alarm about rolling dice.
