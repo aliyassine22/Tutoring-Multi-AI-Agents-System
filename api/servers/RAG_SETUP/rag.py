@@ -316,14 +316,12 @@ class RAGSearchTool(BaseTool):
         base_dir = Path(__file__).resolve().parent.parent.parent.parent
         final_course_path = default_course_path or base_dir / "Courses" / "signals and systems"
         final_persist_dir = Path(persist_directory or base_dir / "Rag/docs/chroma").resolve()
-        # Now, call super().__init__() and pass the required fields as keyword arguments.
         super().__init__(
             default_course_path=final_course_path,
             persist_directory=final_persist_dir,
             collection_name=collection_name
         )
 
-        # Initialize the non-Pydantic, private attributes.
         self._embeddings = OpenAIEmbeddings()
         self._init_lock = threading.Lock()
 
@@ -340,7 +338,6 @@ class RAGSearchTool(BaseTool):
         if self._vectordb is not None:
             return
 
-        # Slow path: build from PDFs, then persist
         loader = DirectoryLoader(
             str(self.default_course_path),
             glob="**/*.pdf",
@@ -348,7 +345,6 @@ class RAGSearchTool(BaseTool):
         )
         raw_docs = loader.load()
 
-        # Metadata processing logic
         for d in raw_docs:
             p = Path(d.metadata["source"])
             parts_lower = [x.lower() for x in p.parts]

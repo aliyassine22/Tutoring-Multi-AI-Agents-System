@@ -25,7 +25,6 @@ def _probe_topic_fn(topic: str,
                     lectures: Optional[List[int]] = None,
                     k: int = 15) -> Dict[str, Any]:
 
-    # ---- PRESENCE (syllabus only) ----
     if intent == "presence":
         prompt = f"""
 You are checking the syllabus for: "{topic}".
@@ -41,11 +40,8 @@ Respond with STRICT JSON ONLY:
         text = str(rag_tool._run(query=prompt, category="syllabus", k=1))
         return {"text": text}
 
-    # ---- RESOURCES (lectures from syllabus) ----
-# inside _probe_topic_fn(...)
 
     if intent == "resources":
-        # Syllabus-only; agent will parse this tiny, regular format.
         prompt = f"""
 You are given syllabus text with topic headers (e.g., "Fourier Series", "Fourier Transform", etc.)
 followed by their lecture numbers.
@@ -69,7 +65,6 @@ NOTE: <<=120 chars brief reason or closest phrasing>
         return {"text": text}
 
 
-    # ---- RETRIEVAL INTENTS (material/exercises/tests) ----
     scope_by_intent = {
         "material": "chapters",
         "exercises": "assignments",

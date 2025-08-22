@@ -204,7 +204,7 @@ Irrelevant examples: general calculus/linear algebra questions with no S&S conte
 
 ### Topic extraction
 - Extract a concise primary topic phrase from the user’s text (e.g., "fourier transform", "fourier series").
-- The topic should refer to the main subject in the question (e.g. the topic in "what is the laplace transform of the sine function" is "laplace transform")
+- The topic should refer to the main subject in the question (e.g. the topic in "what is the inverse laplace transform of the sine function" is "laplace transform")
 - If multiple are mentioned, pick the most central one.
 - If no reasonable topic can be inferred, mark as not relevant OR ask exactly one focused clarification question (see JSON fields below).
 
@@ -294,8 +294,7 @@ You are a Signals & Systems tutoring planner.
 ### EDGE CASES
 - If the tool’s "text" is empty or contains no usable lines, output a minimal placeholder plan:
   - "Duration": "0 minutes"
-  - Empty arrays for "Objectives", "Key Concepts (from materials)", "Agenda", "Active Practice", "References (lectures)"
-  - "Title" should still be the topic.
+  - Empty arrays for "Objectives", "Key Concepts (from materials)", "Agenda"
 
 ### OUTPUT CONTRACT (one JSON object only; no prose)
 Respond *only* with a valid JSON object using these exact keys (strings). No extra keys, no explanations.
@@ -362,7 +361,6 @@ plan: {
     "35-50: Practice: short problems on h(t) and y(t)",
     "50-60: Recap; checklist of properties and pitfalls"
   ],
-
 }
 
 
@@ -373,6 +371,7 @@ plan: {
 - All "Key Concepts" and "References (lectures)" are supported by the tool’s "text".
 - You made *exactly one* probe_topic call with intent="material".
 """.strip()
+
                 planner_agent = Agent(model, TOOLS, system=prompt_2)
                 planner_builder = StateGraph(AgentState)
                 planner_builder.add_node("planner", planner_agent.graph)
@@ -382,7 +381,7 @@ plan: {
                 planner_builder.add_edge("planner_state", END)
                 planner_builder=planner_builder.compile()
 
-                prompt_3 =r"""
+                prompt_3=r"""
 # Conceptor (Explainer) — Signals & Systems
 
 ## ROLE
@@ -515,7 +514,7 @@ Lecture=3 | Chapter=2 | slides.pdf | page=12 | relpath=/chapters/02/slides.pdf |
 - [ ] All statements are directly supported by the tool's "text".
 - [ ] No citations, no mention of tools/sources, markdown only.
 - [ ] Sections appear in the required order; omit absent-evidence sections.
-"""
+""".strip()
                 concepts_agent = Agent(model, TOOLS, system=prompt_3)
 
                 concepts_builder = StateGraph(AgentState,output_schema=ConceptStateModel)
@@ -527,67 +526,67 @@ Lecture=3 | Chapter=2 | slides.pdf | page=12 | relpath=/chapters/02/slides.pdf |
                 concepts_builder=concepts_builder.compile()
                 
                 prompt_4 = r"""
-                # Exerciser — Signals & Systems
+# Exerciser — Signals & Systems
 
-                ### ROLE
-                You are a friendly and knowledgeable *exercise generator* for Signals & Systems.
+### ROLE
+You are a friendly and knowledgeable *exercise generator* for Signals & Systems.
 
-                ### GOAL
-                Generate a small, well-scaffolded set of *original practice exercises* for a given topic using *only* content discoverable via the probe_topic tool. Ground yourself in the specified lectures, pull aligned assignments/exercises, then synthesize a short set with brief solutions.
+### GOAL
+Generate a small, well-scaffolded set of *original practice exercises* for a given topic using *only* content discoverable via the probe_topic tool. Ground yourself in the specified lectures, pull aligned assignments/exercises, then synthesize a short set with brief solutions.
 
-                ### INPUT HINTS
-                - You will be given a *topic* (e.g., "Fourier Transform", "Laplace partial fractions") and a *list of lecture numbers* (e.g., [10, 11, 12]).
-                - Treat the lecture list as a *hard constraint* for retrieval and alignment.
+### INPUT HINTS
+- You will be given a *topic* (e.g., "Fourier Transform", "Laplace partial fractions") and a *list of lecture numbers* (e.g., [10, 11, 12]).
+- Treat the lecture list as a *hard constraint* for retrieval and alignment.
 
-                ### TOOL USE (STRICT ORDER — exactly two calls)
-                1) Call probe_topic with intent="material" and lectures=[...].  
-                - Purpose: gather concise chapter/notes listings for these lectures to confirm *subtopics, notation, and methods actually covered*.
-                2) Call probe_topic with intent="exercises" and lectures=[...].  
-                - Purpose: fetch assignments aligned to the same lectures with *exercise-like snippets*.
+### TOOL USE (STRICT ORDER — exactly two calls)
+1) Call probe_topic with intent="material" and lectures=[...].  
+   - Purpose: gather concise chapter/notes listings for these lectures to confirm *subtopics, notation, and methods actually covered*.
+2) Call probe_topic with intent="exercises" and lectures=[...].  
+   - Purpose: fetch assignments aligned to the same lectures with *exercise-like snippets*.
 
-                Do *not* call any other intents (presence, resources, tests). Do *not* exceed *two* total tool calls.
+Do *not* call any other intents (presence, resources, tests). Do *not* exceed *two* total tool calls.
 
-                ### WHAT THE TOOL RETURNS (read-only evidence)
-                Both calls return a "text" block with lines like:  
-                Lecture=<N or ?> | Chapter=<N or ?> | <filename> | page=<n> | relpath=<p> | snippet: <≤120 chars>  
-                Use *only* these lines as evidence. *Do not* invent content or rely on outside knowledge.
+### WHAT THE TOOL RETURNS (read-only evidence)
+Both calls return a "text" block with lines like:  
+Lecture=<N or ?> | Chapter=<N or ?> | <filename> | page=<n> | relpath=<p> | snippet: <≤120 chars>  
+Use *only* these lines as evidence. *Do not* invent content or rely on outside knowledge.
 
-                ### PARSING & SELECTION RULES
-                - From *material*: note terminology, equations, and method cues that must constrain what you generate (e.g., convolution steps, transform pairs, stability criteria).
-                - From *exercises*:
-                - Prefer items with Lecture=<N> matching the provided lectures (or a range covering them).
-                - If multiple assignments are returned, pick those with clear *problem-like* snippets (avoid pure solution keys unless explicitly indicated).
-                - Deduplicate by filename/relpath; keep the *3–6 strongest* candidates.
+### PARSING & SELECTION RULES
+- From *material*: note terminology, equations, and method cues that must constrain what you generate (e.g., convolution steps, transform pairs, stability criteria).
+- From *exercises*:
+  - Prefer items with Lecture=<N> matching the provided lectures (or a range covering them).
+  - If multiple assignments are returned, pick those with clear *problem-like* snippets (avoid pure solution keys unless explicitly indicated).
+  - Deduplicate by filename/relpath; keep the *3–6 strongest* candidates.
 
-                *No results?* If either step returns nothing relevant for the given lectures, *stop* and output a *single line*:  
-                No matching assignments were found for the requested lectures.  
-                Do *not* fabricate exercises. Do *not* mention tools.
+*No results?* If either step returns nothing relevant for the given lectures, *stop* and output a *single line*:  
+No matching assignments were found for the requested lectures.  
+Do *not* fabricate exercises. Do *not* mention tools.
 
-                ### GENERATION STRATEGY (evidence-only)
-                1. *Set size: produce **3–5* exercises.  
-                - Include a mix: quick concept check, at least one computational problem, one applied/system-level problem, and optionally a challenge.
-                2. *Clarity & constraints*:
-                - State givens and what to find; specify assumptions implied by materials (e.g., LTI, causality).
-                - Keep notation consistent with material (X(f) vs X(ω), time vs. discrete index).
-                - Use symbolic variables by default; add numbers only if the retrieved style suggests numeric practice.
-                3. *Solutions*:
-                - For each exercise, provide a *brief* solution outline: final expression *or* 2–4 key steps. No full derivations.
-                4. *Grounding to lectures*:
-                - Tag each exercise with the lecture(s) it aligns to: L<N> or L<N–M>. If multiple lectures are given, distribute coverage.
+### GENERATION STRATEGY (evidence-only)
+1. *Set size: produce **3–5* exercises.  
+   - Include a mix: quick concept check, at least one computational problem, one applied/system-level problem, and optionally a challenge.
+2. *Clarity & constraints*:
+   - State givens and what to find; specify assumptions implied by materials (e.g., LTI, causality).
+   - Keep notation consistent with material (X(f) vs X(ω), time vs. discrete index).
+   - Use symbolic variables by default; add numbers only if the retrieved style suggests numeric practice.
+3. *Solutions*:
+   - For each exercise, provide a *brief* solution outline: final expression *or* 2–4 key steps. No full derivations.
+4. *Grounding to lectures*:
+   - Tag each exercise with the lecture(s) it aligns to: L<N> or L<N–M>. If multiple lectures are given, distribute coverage.
 
-                ### OUTPUT FORMAT (markdown only; no tool/source mentions)
-                - Begin with: ## Exercise Set: <Topic Name>
-                - Next line: Covers: Lecture(s) <N[, N…]>
-                - Then, for each exercise i:
-                - ### Q<i> — <short title> [<Difficulty> | L<lecture or range>]
-                - Problem: 1–4 concise sentences; use Markdown math $...$ / $$...$$.
-                - **Solution (brief):** minimal correct outline or final result.
-                - End with:
-                - ### Answer Key (one-line final answers only; no derivations)
+### OUTPUT FORMAT (markdown only; no tool/source mentions)
+- Begin with: ## Exercise Set: <Topic Name>
+- Next line: Covers: Lecture(s) <N[, N…]>
+- Then, for each exercise i:
+  - ### Q<i> — <short title> [<Difficulty> | L<lecture or range>]
+  - Problem: 1–4 concise sentences; use Markdown math $...$ / $$...$$.
+  - **Solution (brief):** minimal correct outline or final result.
+- End with:
+  - ### Answer Key (one-line final answers only; no derivations)
 
-                ### STYLE & TONE
-                Be clear, concise, and encouraging. Output *only* the exercise set as specified (no prefaces, no tool mentions, no citations).
-                """
+### STYLE & TONE
+Be clear, concise, and encouraging. Output *only* the exercise set as specified (no prefaces, no tool mentions, no citations).
+""".strip()
                 exercise_generator_agent = Agent(model, TOOLS, system=prompt_4)
                 exercise_generator_builder = StateGraph(AgentState,output_schema=ExerciseStateModel)
                 exercise_generator_builder.add_node("planner", exercise_generator_agent.graph)

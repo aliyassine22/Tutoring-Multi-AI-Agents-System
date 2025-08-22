@@ -19,8 +19,7 @@ from googleapiclient.errors import HttpError
 from pathlib import Path
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.compose", "https://www.googleapis.com/auth/calendar"]
-HERE = Path(__file__).resolve().parent      
-
+HERE = Path(__file__).resolve().parent
 
 # we need to enable the setup at this level
 sys.path.append('../..')
@@ -90,38 +89,23 @@ def mcp_probe_topic(
     return rag_tool._probe_topic_fn(**args.model_dump(exclude_none=True))
 
 @mcp.tool(
-    name="draf_email",
+    name="send_email",
     description="""
-        Creates a draft email in the user's Gmail account.
+        Send an email from the user's Gmail account.
         Requires the recipient's email address (`to`), the email content (`body`),
         and an optional `subject`. This tool only creates a draft; it does not send the email.
     """
 )
-def gmail_create_draft(to: str, body: str, subject: str ="Tutoring Session"):
+def gmail_send_message(to: str, body: str, subject: str ="Tutoring Session"):
+  """Create and send an email message
+  Print the returned  message id
+  Returns: Message object, including message id
+
+  Load pre-authorized user credentials from the environment.
+  TODO(developer) - See https://developers.google.com/identity
+  for guides on implementing OAuth2 for the application.
   """
-    Create and insert a draft email.
-    Print the returned draft's message and id.
-    Returns: Draft object, including draft id and message meta data.
 
-    Load pre-authorized user credentials from the environment.
-    TODO(developer) - See https://developers.google.com/identity
-    for guides on implementing OAuth2 for the application.
-
-    Args:
-        to (str): Recipient email address (RFC 5322 format).
-        body (str): Plain-text email content (e.g., the planned session outline).
-        meeting_date (datetime.datetime): The meeting’s date/time. If timezone-aware,
-            it will be formatted accordingly; if naive, treat as UTC unless your
-            implementation defines otherwise.
-
-    Raises:
-        ValueError: If inputs are missing or invalid (e.g., empty `to` or `body`).
-        googleapiclient.errors.HttpError: If the Gmail API request fails.
-
-    Notes:
-        - This function only creates a draft; sending the email is a separate action.
-        - Subject line and body formatting are implementation-defined.
-  """
   creds = _get_google_creds(SCOPES)
   try:
     # create gmail api client
@@ -131,16 +115,16 @@ def gmail_create_draft(to: str, body: str, subject: str ="Tutoring Session"):
     
     # time_str = meeting_date.strftime("%H:%M")
 
-    content="""
+    content=f"""
     Greetings,
     
     I hope this email finds you well,
     
-    Note that we will have our meeting as scheduled , to access the meeting session, please use the following https://www.youtube.com/ ,
+    Note that we will have our meeting as scheduled , to access the meeting session, please use the following: https://www.youtube.com/ ,
     
     For our session, we will cover the following topics:
-      
-    """+ body + """
+    
+    {body}
     
     Best regards,
     Ali
@@ -157,18 +141,16 @@ def gmail_create_draft(to: str, body: str, subject: str ="Tutoring Session"):
 
     create_message = {"message": {"raw": encoded_message}}
     # pylint: disable=E1101
-    draft = (
+    send_message = (
         service.users()
-        .drafts()
-        .create(userId="me", body=create_message)
+        .messages()
+        .send(userId="me", body=create_message)
         .execute()
     )
-
-    print(f'Draft id: {draft["id"]}\nDraft message: {draft["message"]}')
-
+    print(f'Message Id: {send_message["id"]}')
   except HttpError as error:
     print(f"An error occurred: {error}")
-    draft = None
+    send_message = None
 
 @mcp.tool(
     name='scrape_calendar',
@@ -241,8 +223,8 @@ def update_calendar(
     description: Optional[str] = None,
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
-    attendees: List[str]= None
-) -> Dict[str, str]:
+    attendees: Optional[List[str]]= None
+):
   """
   Updates an existing event in the primary Google Calendar.
   Fetches the event, modifies specified fields, and pushes the update.
@@ -347,38 +329,3 @@ if __name__ == "__main__":
     mcp.run(transport="sse")
     
     
-# def update_calendar(
-#     eventId: str,
-#     summary: Optional[str] = None,
-#     description: Optional[str] = None,
-#     start_time: Optional[str] = None,
-#     end_time: Optional[str] = None):
-#   """
-#   Updates an existing event in the primary Google Calendar.
-#   Fetches the event, modifies specified fields, and pushes the update.
-
-#   """
-#   creds = _get_google_creds(SCOPES)
-#   try:
-#     service = build("calendar", "v3", credentials=creds)
-
-
-#     GMT_OFF = '03:00'  
-
-#     updated_event_body = {
-#     'summary': 'Updated Meeting Title',
-#     'description': 'This is an updated description for the meeting.',
-#     'start': {'dateTime': '2025-08-23T19:00:00%s' % GMT_OFF},
-#     'end':   {'dateTime': '2025-08-23T22:00:00%s' % GMT_OFF},
-#     }
-
-    
-#     updated_event= service.events().update(calendarId='primary',
-#                                           eventId=eventId,
-#                                           body=updated_event_body,
-#                                           sendUpdates='all' # 'all', 'externalOnly', or 'none'
-#                                           ).execute()
-#     print(f"Event updated: {updated_event['htmlLink']}")
-
-#   except HttpError as error:
-#         print(f"An error occurred: {error}")

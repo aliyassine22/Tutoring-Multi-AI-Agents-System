@@ -22,16 +22,28 @@ from langchain_core.messages import HumanMessage
 import asyncio
 
 skill1 = AgentSkill(
-    id='relevencer-checker',
+    id='relevancer-checker',
     name='Relevancer',
     description='Agent responsible for checking the topic queried by the user discussed within the course',
-    tags=['relevencer-checker']
+    tags=['relevancer-checker']
 )
 skill2 = AgentSkill(
-    id=' session-planner',
+    id='session-planner',
     name=' SPlanner',
     description='create a tutoring session plan for a specific topic',
     tags=['session-planner']
+)
+skill3 = AgentSkill(
+    id=' exercise_generator',
+    name=' Exerciser',
+    description='genrate exercises for a specific topic',
+    tags=['exercise_generator']
+)
+skill4 = AgentSkill(
+    id='concept_clarifier',
+    name='Conceptor',
+    description='answer a question based on the material',
+    tags=['concept_clarifier']
 )
 agent_card = AgentCard(
     name='tutoring_session_designer',
@@ -41,9 +53,8 @@ agent_card = AgentCard(
     defaultInputModes=['text'], 
     defaultOutputModes=['text'],
     capabilities=AgentCapabilities(streaming=True), # Basic capabilities
-    skills=[skill1, skill2] # Includes the skill defined above
+    skills=[skill1, skill2, skill3, skill4] # Includes the skill defined above
 )
-
 class LanggraphAgentExecutor(AgentExecutor):
     def extract_content(self, message):
         """Extract content from either dict or message object"""
@@ -72,62 +83,7 @@ class LanggraphAgentExecutor(AgentExecutor):
         # Create the graph with the active session
         self.agent = await main(session)
         self.initialized = True
-
-    # def __init__(self):
-    #     self.agent = graph
-    # async def execute(
-    #         self,
-    #         context: RequestContext,
-    #         event_queue: EventQueue,
-    # ) -> None:
-    #     query = context.get_user_input()
-    #     task = context.current_task
-    #     if not task:
-    #         task = new_task(context.message)
-    #         await event_queue.enqueue_event(task) # added await
-    #     updater = TaskUpdater(event_queue, task.id, task.context_id)
-    #     # try:
-    #     #     input = {"messages": [HumanMessage(content=query)]} # fix
-    #     #     config = {'configurable': {'thread_id': task.context_id}}
-    #     ###########################
-    #     try:
-    #         input = {"messages": [HumanMessage(content=query)]}
-    #         config = {'configurable': {'thread_id': task.context_id}}
-    #     #############################
-    #         async for item in self.agent.astream(input, config, stream_mode='values'):
-    #             async for item in self.agent.astream(input, config, stream_mode='values'):
-    #                 # Check if queue is still active before processing
-    #                 if hasattr(event_queue, '_closed') and event_queue._closed:
-    #                     print("Queue closed, terminating early")
-    #                     break
-                    
-    #                 if(item.get("next", None) == 'FINISH'):
-    #                     if(item.get("next", None) == 'FINISH'):
-    #                         await updater.complete(message=new_agent_text_message(
-    #                             self.extract_content(message=item['messages'][-1]), #ai message not subscriptable (was ['content]), dict has no attribute content
-    #                             task.context_id,
-    #                             task.id,
-    #                         ))
-    #                     else:
-    #                         await updater.update_status(
-    #                             TaskState.working,
-    #                             new_agent_text_message(
-    #                                 self.extract_content(message=item['messages'][-1]), #ai message not subscriptable (was ['content]), dict has no attribute content
-    #                                 task.context_id,
-    #                                 task.id,
-    #                             ),)
-                            
-    #     except asyncio.TimeoutError:
-    #         print("LangGraph execution timed out")
-    #         await updater.complete(message=new_agent_text_message(
-    #             "Session planning timed out. Please try again with a simpler request.",
-    #             task.context_id,
-    #             task.id,
-    #         ))
-    #     except Exception as e:
-    #         print(e)  # your existing exception handler
             
-
     async def execute(
             self,
             context: RequestContext,
@@ -161,7 +117,7 @@ class LanggraphAgentExecutor(AgentExecutor):
             )
 
             # Execute with timeout
-            async with asyncio.timeout(60):  # 60 second timeout
+            async with asyncio.timeout(120):  # 60 second timeout
                 print("DEBUG: Starting astream...")
                 async for item in self.agent.astream(input, config, stream_mode='values'):
                     print(f"DEBUG: Received item: {type(item)} - {item}")
