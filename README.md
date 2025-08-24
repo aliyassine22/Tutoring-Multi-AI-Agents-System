@@ -141,3 +141,196 @@ To be capable of doing all the above, there were three tutorials that I used the
 * [https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/](https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/)
 * [https://www.deeplearning.ai/short-courses/pydantic-for-llm-workflows/](https://www.deeplearning.ai/short-courses/pydantic-for-llm-workflows/)
 * [https://www.youtube.com/watch?v=lnm0PMi-4mE\&t=29s](https://www.youtube.com/watch?v=lnm0PMi-4mE&t=29s)
+
+
+## Building our LangGraph based agents:
+
+With the rag tool ready, I created specialized agents, each with a distinct role and a tailored way to invoke the tool, using LangGraph’s React architecture. The approach to build the react agent is from the AI Agents in LangGraph tutorial and will be the standard pattern which will be followed for all our agents. The whole point of using this approach was to add flexibility to my agents. After all, I started initially by using the create\_tool\_calling\_agent built in method that attaches a llm with a tool and then wrapped it using them together using agent executor class (you may check the results in the rag notebook).
+As for the adopted react agent, you may find the architecture in the following figure:
+
+<img width="310" height="373" alt="image" src="https://github.com/user-attachments/assets/47c13967-b997-488e-acf5-39aa52eba36b" />
+
+
+Briefly going over the architecture, this agent is composed of two main nodes, the llm node were the model that is bound to tools reads the accumulated messages, injects the system prompt once, and either answers directly or emits structured tool\_calls. As for the tools node, it executes those calls, returns tool messages and loops control back to the llm  until no further actions are needed.
+Now for our agents, I built an independent graph for every agent although the graph implementation was given with react agent, all for the sake of having structured outputs for every agent. Please find the architecture of our LangGraph based tutoring agent in the following figure:
+
+<img width="698" height="369" alt="image" src="https://github.com/user-attachments/assets/9504a740-e20b-4cd1-a9f2-3fb0ed0b95eb" />
+
+The above graph represents a high level view of our tutoring agent.
+
+### Relevancer agent
+
+The relevance agent is the one that will check if the topic that the user is interested in is relevant to the course, based on the user query and his topic relevance, the conditional edge afterwards will determine whether to router the query to some other agent and educate the search or to end the whole process in case of irrelevancy. The whole point of this agent is to guide our search and to prevent the waste of resources. The output of this agent will be as in the following sample where the user is querying about a z transform fourier session:
+
+<img width="900" height="144" alt="image" src="https://github.com/user-attachments/assets/afab6b7a-5a93-4732-841a-16e9f6bba0a6" />
+
+Let us look at this output together so that we may have an insight on how the work of the following agents will be guided. Based on the purpose of the root agent (the one calling the whole langGraph agentic flow), we will know to which agent the query is to be forwarded in case the topic was relevant, as for the lecture list, it represents the lecture where the topic is discussed. The tool calls issued parameter was used for me to check if the model is calling the tool the way I instructed in the prompt and a sanity check at the same time.
+What is great of the above output is that it was captured when I had two issues. The first was that the vector db was full of duplicates (4 or 5) because I loaded the documents every time the kernel restarted (at that point, I realized that I need to load embedding from the db instead of adding them all over again and did directly add the load from db method in the rag class). The second reason, which is the most crucial, was the prompt. I was not clear and the prompt was instructing the rag to get the lectures where the topic is first mentioned, not where the topic is discussed in details in the syllabus. I managed to solve both issues later on. In the notebook, you will see me trying different prompts (I recorded some trials but got bored after all, so I started refining directly). There will be a section where I will discuss my prompt template that I finally relied on and was exceptional in every possible way, stay tuned.
+Spoiler alert, this is the correct output I have got after fixing my prompt.
+
+<img width="900" height="149" alt="image" src="https://github.com/user-attachments/assets/6aba7da1-6336-49ea-ae8e-c8cb5fe78426" />
+
+### Planner agent
+
+As for the second agent, the planner, this agent will create a plan for tutoring session after scraping the lectures that are handed from the relevancer agent related to the user topic and send this plan for approval.
+Note that this agent, as it is with the other agents, is a subgraph because it has a unique output. I find it useful here to advice those who want to have a well formatted formats to use a markdown based outputs instead of a json based one as I did with the planner in case the output of the agent is to be returned to the user and not further interpreted.
+Below is a sample output from the planner agent:
+
+<img width="900" height="476" alt="image" src="https://github.com/user-attachments/assets/2100e96c-103f-4129-9793-0afe5ecdc2c4" />
+
+### When to format Note
+
+•	In case your output is to be returned to the user, adopt a markdown format in your prompt as I did with the concept explainer and the exercise generator agent and must have done with the planner agent instead of formatting the json output which happened to be useless.
+•	In case your output is to be used by other agents in a sequential workflow, it must be in a json format so that you are to extract useful info and pass it down to those agents to use, there is no other choice.
+
+### Conceptor agent
+
+This agent relies on topic related lectures to answer the user inquiry questions. Similar to the planner, this agent calls the probe topic (rag tool ) only once and returns a clarification that is well formatted. Here is a sample output in a markdown format:
+
+<img width="900" height="206" alt="image" src="https://github.com/user-attachments/assets/31ddcf88-1dcf-414b-b26e-f1fe9f3407d2" />
+
+Note that this format will be read properly on our frontend and will be shown at the end of this readme in the demo section
+
+### Exercise generator agent
+
+This guy calls the probe topic tool twice, the first to scrape the lectures for the assignment’s information, and the second to scrape the assignments and get relevant exercises. I would have also further extended this agent with an option to scrape exams, however I got shortened on time. To do so, the prompt will need to be updated in the following manner so that the agent will follow also 2 tool calls strategy but of course with an addition of an extra flag in the relevancer agent called scrape\_test. The prompt will be extended to the current version to accommodate to this parameter, in case the flag is set to false, the current workflow will be undergone. However, if the flag is true, we will need to call our probe tool in a different strategy where the first call will be with scope syllabus and intent material to check for the exams’ questions related to the topic and the second with intent tests to go over the tests and retrieve relevant samples.
+This is a sample output of our exercise generator in a markdown format:
+
+<img width="1080" height="509" alt="image" src="https://github.com/user-attachments/assets/8e162375-819c-4d5e-ba46-884056ebd532" />
+
+### Building the whole thing
+
+After building those subgraphs, I put them all together in the graph shown above. This process of putting subgraphs together is adopted in large and complicated projects to enable powerful pipelines. My primary motivation was to reuse a single Agent class for all four roles. Since each agent has a unique output schema, I wrapped each one in a dedicated subgraph. This allowed me to add a final node to each subgraph responsible for parsing the agent's specific output and updating the main graph's state accordingly.
+In the following image, you will observe two subgraphs (relevancer and planner) joined together to have a better understanding of what is being proposed.
+
+<img width="494" height="1331" alt="image" src="https://github.com/user-attachments/assets/4e443f72-fe71-4956-90cf-4d397e7d3393" />
+
+### Final note
+
+At the stage of building prompts, I did not have enough time to record every change I did and every trial because I was losing time. At that stage and after finding the prompt template to adopt, my whole purpose was to make things work. In the rag notebook, things turned out to be messy as we tend to the end because I was running different cells in different orders only for the sake of testing, that’s why you might find it hard to follow up with the rag notebook as it tend to the end unless you run it in order. I apologize for confusion. You may find my first developed prompts before getting the prompt schema and adopting and tweaking it in the builder notebook.
+The changes to the prompt template were done directly in the buildup and were not recorded due to the deadline emerging and full focus on developing an ultimate working product. The template will be provided and explained so that others may benefit from it in another section (working with the prompt was the most stressful and thrilling thing that I have done throughout this project).
+
+### References
+
+[https://www.deeplearning.ai/short-courses/ai-agents-in-langgraph/](https://www.deeplearning.ai/short-courses/ai-agents-in-langgraph/)
+[https://academy.langchain.com/courses/take/intro-to-langgraph](https://academy.langchain.com/courses/take/intro-to-langgraph) , specifically module 2 and 4
+note that the source codes of each course are downloaded locally. 
+
+## ADK based agents
+
+### General Overview
+
+For our adk agents, I wanted to adopt a high level structure that will utilize the power of the google open api. For that reason, I decided to ensure the user communication track with the tutoring agent acting on behalf of the tutor via google gmail and calendar tools.
+
+### Calendar Agent
+
+The calendar agent plays a vital role in this vision, as it is the agent that will give out to the user’s necessary information about the available sessions and book or cancel the sessions for them. For this purpose, the calendar agent had access to two main tools to use (it has 4 tools attached and will explain the purpose each one).
+
+#### List events tool
+
+This tool will scrape the calendar for the available tutoring sessions to return them to the users.
+
+#### Update event tool
+
+Once the user decides on an available tutoring session, this tool will change the title of that event to tutoring session and add a brief description about the topic in addition to the user email.
+Now for the tools that might be integrated for different purposes
+
+#### Delete event tool
+
+This tool was to be used in one scenario, in case the user want to unbook in a 6 hours range pre the session for some reason, it will delete the event and send the tutor a deletion note from the student or perhaps a rescheduling note.
+
+#### Create event tool
+
+This tool in case it is to be used is to be used by the tutors not the students, so currently it has no available use case. However, if we decided to extend this agent into a full scaled product that works with both parties (tutors and students, not only students), this tool will be of great benefit. To be honest, I only used this tool in the current scenario so that an agent creates the available tutoring session events on my behalf (I did not want to do this process manually).
+
+### Gmail Agent
+
+This agent will be the one responsible for sending emails of the plan accompanied by the meeting link to the students using the send email tool. Note that I had initially a different vision for this agent, that is it draft emails for the tutor with the plan embedded with them and the tutor in this case will need only to send (him sending the email is the approval). However, if we investigate things from a broader perspective, we will notice that the student is more familiar with what he needs to be tutored on, thus it would be more reasonable for the plan once approved by the student to be sent directly to the student. Hence, the draft email (for the tutor) tool was changed to the send email (to the student) tool.
+
+### Crucial Gap: authentication
+
+On medium, the following website discusses how to build up this structure in a way where you import the tools directly from google using the apis’ scopes only. Unfortunately, I spent nearly 6 hours trying to make their approach work but did not do so. Moreover, on that website, the author suggests a solution for authentication where the user will only authenticate once (I tried it his way but failed miserably). After that, I decided to build in the tools myself using the google gmail api docs and the google calendar api docs and did everything by self in less than 1 hour.
+As for the authentication issue (you need to authenticate every time you want to use a google api call), I discussed the current problem with Mr. Roy Daher, the devops track instructor at inmind, and suggested that to do this properly I need a robot agent that handles only authentication. This approach happened to be time consuming and based on Roy’s advice, I had to skip it to make the full product work as whole.
+
+#### Current authentication approach:
+
+Whenever a user calls a Google API, they must authenticate. According to the joogle API docs, you should place a credentials.json file (your OAuth client credentials) in the same directory as your application. After the first sign-in, the library creates a token.json file that stores the user’s access and refresh tokens. If this file is present and valid, the app can make subsequent requests without prompting the user to authenticate again. Since it is more likely for tokens to expire or become invalid, I always insured the authentication will take place whenever a google tool call is issued.
+
+\###Note
+The progress that was made and the way I developed and tested the tools one by one can be tracked by referring to the adk agents notebook.
+
+### References:
+
+[https://developers.google.com/workspace/gmail/api/guides](https://developers.google.com/workspace/gmail/api/guides)
+[https://developers.google.com/workspace/calendar/api/guides/overview](https://developers.google.com/workspace/calendar/api/guides/overview)
+medium article (waste of time): [https://medium.com/google-cloud/building-a-multi-agent-application-to-interact-with-google-products-b7ff7eb2f17d](https://medium.com/google-cloud/building-a-multi-agent-application-to-interact-with-google-products-b7ff7eb2f17d)
+
+## Deployment on MCP server
+
+Those tools in addition to the probe topic tool (rag tool) were deployed on an fast mcp server running with server sent events for transport where they are made available to different agents. Note that calling the tools by adk agents is a simple process that requires no more than using the mcp tool set with an sse connection object and a tool filter. However, it took me some time to figure out how to connect the langGraph based agents to their probe tool while enabling the a2a protocol.
+ 
+
+## A2A Protocol
+
+For setting up the a2a protocol, I referred first to a youtube tutorial to understand the intuitions behind this protocol and review the implementation. After that, my colleague at inmind academy Mohamad Shoeib referred me to a robust medium article that provides the general structure for the a2a communication protocol. Note that I had to introduce some changes to the code to make it compatible with my case.
+This a2a server implementation provides a web interface for our langGraph based agent. It begins by defining an agent card, which acts as a public profile, advertising the agent's name, capabilities (streaming), and specific skills. The core of the server is the A2AStarletteApplication that listens to http requests and passes them to the default DefaultRequestHandler that uses a custom LanggraphAgentExecutor to manage the actual task execution. When a user query is received, the executor streams the input into the langGraph agent, which maintains conversational state using a thread id. As the graph processes the request through its various nodes, the executor uses an event queue and a task updater to send real time progress messages back to the client, finally delivering a completion message when the graph reaches its end state.
+Our langGraph agent was successfully deployed on an a2a server following the above process, but throughout this integration I faced an issue with the langGraph agent being unable to connect to the mcp server. I got this error because I thought the notebook practices in calling tools after connecting the mcp session can be applied directly when invoking the same functionalities in the python file. This confusion took me a while to catch, it is working there but not here, why so?
+At the beginning, I thought that the error is due to timeouts, so I insured the timeout was more than sufficient, but that was not the case. The case was due to losing connection to my mcp server when I instantiate my langGraph based agent. To fix it, one must ensure that the mcp server is instantiated outside of the method that returns langGraph and before this method is called, and that is exactly what happened.
+There is one more thing that I cannot avoid mentioning, that is the astream method that provides an asynchronous way to stream outputs from a graph execution. In this method, you may notice that I have set the stream mode to values. This was done so that a complete snapshot of the entire graph's state is returned after each node executes, thus making tracking feasible. In contrast, modes like 'updates' or 'messages' would only provide partial information, such as the output of the last node, preventing this level of stateful tracking.
+ 
+Now that our langGraph based agent is successfully deployed using an a2a server, what is going to happen next is that we will connect our orchestrator, an adk based root agent with having the calendar and gmail agents as subagent with our langGraph agent (the prime agent) as a subgraph.
+Note that the adk agents were created in the same file as the orchestrator.
+In the next section, I am going to discuss the prompt template that I have adopted with my agents.
+
+## References
+
+The following references where mainly used in the development of the adk agents and the mcp and a2a protocol.
+[https://www.youtube.com/watch?v=P4VFL9nIaIA](https://www.youtube.com/watch?v=P4VFL9nIaIA)
+[https://github.com/bhancockio/agent-development-kit-crash-course](https://github.com/bhancockio/agent-development-kit-crash-course)
+[https://www.youtube.com/watch?v=mFkw3p5qSuA](https://www.youtube.com/watch?v=mFkw3p5qSuA)
+[https://medium.com/@aditya\_shenoyy/google-a2a-enabling-existing-langgraph-agents-to-work-with-the-google-a2a-protocol-using-adk-6358e08cae6d](https://medium.com/@aditya_shenoyy/google-a2a-enabling-existing-langgraph-agents-to-work-with-the-google-a2a-protocol-using-adk-6358e08cae6d)
+[https://www.youtube.com/watch?v=HkzOrj2qeXI](https://www.youtube.com/watch?v=HkzOrj2qeXI)
+ 
+
+## Prompt template
+
+The changes that were introduced to each prompt, especially the one of the orchestrator, would take forever to discuss. In this section, I will discuss the structure of the main prompt used in case anyone would like to use it in his project.
+
+<img width="900" height="697" alt="image" src="https://github.com/user-attachments/assets/e7806b03-18fd-4c15-9dbd-2d6d112c3ecb" />
+
+This is a brief explanation for each section in the prompt in case you are interested:
+
+| Component                        | Explanation & supporting evidence                                                                                                                                                                                                                                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Role / Mission                   | Defines who the model is and what success looks like. This sets the persona and scope.                                                                                                                                                                                                                                   |
+| Goal / Intent                    | Articulates the deliverable or success criteria. A prompt stack begins with the intent, the goal, target audience and success criteria.                                                                                                                                                                                  |
+| Tool use                         | Specifies which tools the model is allowed to call and how to use them. System prompts should list allowed tools and usage rules, and a prompt stack includes a tool catalog with names, purpose, input/output schema and limits. The “capabilities” layer of context engineering includes tool definitions and schemas. |
+| What the tool returns            | Clarifies that tool outputs become part of the context. When an agent calls a tool, the result (data payload or error) is fed back into the context window as an observation. The prompt schema should explain that returned values serve as evidence for the model’s next step.                                         |
+| Task rules / Reasoning mode      | Outlines the step by step method or reasoning mode. Production architectures separate planning, execution and checking; planners decompose tasks and define success criteria, executors call tools, and checkers validate results. System prompts often instruct the model to plan first, then act.                      |
+| Approval & Clarification         | States when and how the agent should ask the user for clarification. System prompts may include an escalation rule: when unsure, ask one clarifying question. MCP documentation notes that tools may need to ask clarifying questions or require human approval before completing operations.                            |
+| Routing / Decision guide         | For agents controlling multiple models or tools, the prompt stack uses routers and controllers to decide which pattern or tool to invoke. The controller orchestrates steps and chooses patterns like zero shot, chain of thought or tool first strategies.                                                              |
+| State / Context rules            | Defines how to manage memory and context. Context engineering treats short term memory (recent conversation), long term memory (persistent user data) and retrieved documents as layers. Best practices include writing to scratchpads, selecting relevant memories, compressing context and isolating sub agents.       |
+| Edge cases / Error handling      | Prompts should specify how to handle empty or conflicting inputs. Anthropic engineers advise testing prompts against edge cases—unexpected or incomplete inputs—and instructing the model to return an “unsure” tag when uncertain. This prevents the model from guessing.                                               |
+| Output format / Contract         | The system prompt should define the output contract—JSON schema or markdown—and include examples. The prompt stack’s output contract layer requires a machine checkable schema with citations and confidence.                                                                                                            |
+| Validation checks                | High quality agents include a verification layer that uses checklists, schema validation and policy tests to ensure outputs conform to the contract. This layer catches hallucinations or policy violations before returning the response.                                                                               |
+| Few shot examples                | Providing 2–5 curated examples helps teach structure and tone. System prompting guides note that few shot prompting improves format fidelity, and a few shot store can be part of the prompt architecture.                                                                                                               |
+| Tone & Style                     | Sets the voice, style and communication guidelines. System prompts should specify style (e.g., “Be concise; no emojis”). The persona based prompting pattern instructs the model to adopt a specific tone and avoid insults.                                                                                             |
+| Safety & Boundaries / Guardrails | Explicit guardrails tell the model what to avoid, such as “never reveal private keys”. Constraints also cover risk boundaries like cost or latency budgets and refusal policies for out of scope requests.                                                                                                               |
+
+### Resources
+
+I want to note that this prompt template was not reached from the first shot, it was influenced by from an n8n tutorial, anyone interested in boosting his prompt is advised to look in the n8n community. Note that on n8n, there are too many great prompts that I did not have enough time to experiment with. As for this template, it was built step by step in parallel with this reference and more additional sections were added based on the result.
+[https://www.youtube.com/watch?v=77Z07QnLlB8](https://www.youtube.com/watch?v=77Z07QnLlB8)
+
+## Fastapi integration
+
+To deploy my agent, I built a fastapi application that serves as an interface to the google adk runner. At server startup, I initialize a single, persistent runner instance. This runner is configured with my root agent, an InMemorySessionService to manage conversational state, and an InMemoryMemoryService to provide the agent with long-term memory. By creating this runner only once, I avoid the overhead of re-initializing the agent and its services for every incoming request. However, even though things happened exactly according as stated and directed in the google documentation, I could not figure out why the agent has no memory and wan’t keeping track of the conversation. Hence, this will be further investigated and once I resolve the issue, the solution will be hopefully provided.
+Note that I have also tried to stream my outputs following the exact deployment steps found in the reference (google adk streaming) but was not capable to due to a pydantic error that I kept facing. Hence, I just adopted the regular approach without streaming and being organized.
+Those issues will be resolved hopefully in the upcoming releases.
+
+### References:
+
+[https://google.github.io/adk-docs/get-started/testing](https://google.github.io/adk-docs/get-started/testing)
+[https://google.github.io/adk-docs/streaming/custom-streaming](https://google.github.io/adk-docs/streaming/custom-streaming)
+[https://youtu.be/HAJvxR8Hf6w?si=SERc\_ANisOKw1M73](https://youtu.be/HAJvxR8Hf6w?si=SERc_ANisOKw1M73)
+
