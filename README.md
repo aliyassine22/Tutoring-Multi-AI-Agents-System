@@ -232,7 +232,7 @@ This is a sample output of our exercise generator in a markdown format:
 After building those subgraphs, I put them all together in the graph shown above. This process of putting subgraphs together is adopted in large and complicated projects to enable powerful pipelines. My primary motivation was to reuse a single Agent class for all four roles. Since each agent has a unique output schema, I wrapped each one in a dedicated subgraph. This allowed me to add a final node to each subgraph responsible for parsing the agent's specific output and updating the main graph's state accordingly.
 In the following image, you will observe two subgraphs (relevancer and planner) joined together to have a better understanding of what is being proposed.
 
-<img width="494" height="1331" alt="image" src="https://github.com/user-attachments/assets/4e443f72-fe71-4956-90cf-4d397e7d3393" />
+<img width="494" height="700" alt="image" src="https://github.com/user-attachments/assets/4e443f72-fe71-4956-90cf-4d397e7d3393" />
 
 ---
 
@@ -355,7 +355,7 @@ The following references where mainly used in the development of the adk agents 
 
 The changes that were introduced to each prompt, especially the one of the orchestrator, would take forever to discuss. In this section, I will discuss the structure of the main prompt used in case anyone would like to use it in his project.
 
-<img width="900" height="697" alt="image" src="https://github.com/user-attachments/assets/e7806b03-18fd-4c15-9dbd-2d6d112c3ecb" />
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e7806b03-18fd-4c15-9dbd-2d6d112c3ecb" />
 
 This is a brief explanation for each section in the prompt in case you are interested:
 
