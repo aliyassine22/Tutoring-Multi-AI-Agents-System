@@ -78,3 +78,66 @@ I used a **recursive character splitter** for hierarchical splitting and context
   * Keeps chunks under token limits without mid-sentence cuts.
 
 **Chunking choices:** overlap set to **10%** of chunk size. I tested sizes **500**, **1000**, and **1500** tokens; **500** performed best (tighter semantic focus, less noise). Larger chunks also require larger overlaps, increasing duplication—another reason to prefer 500 here.
+
+
+### Step 3: Vector Stores and Embeddings
+
+Before doing my research, I was curious why Harrison Chase, Lang Chain’s CEO, was repetitively relied on using chroma vector db integrated with the open ai embeddings in his rag courses. If you go to Lang Chain’s documentation of chroma, you will even notice the following definition for chroma:
+
+* Chroma is a AI-native open-source vector database focused on developer productivity and happiness.
+
+After doing my research, it turned out that chroma is an easy to use vector db that is designed to be used for llm and semantic search ai applications, known for it scalability, and more importantly specifically optimized for storing, indexing, and querying high-dimensional vector embeddings using approximate nearest-neighbor search. But this is not all, the main reason I didn’t even think of trying out other options is the metadata filtering. Chroma stores structured metadata alongside each vector and apply hard filters before vector search where it combine Boolean/meta filters and semantic scores in one pass for precision.
+
+As for the embeddings, I adopted the open ai embeddings, the one Harrison Chase use. It is known that open ai embedding models produce rich, general purpose representations that capture semantic meanings across text, equations, code snippets. Note that I also thought of trying out other embeddings (the GoogleGenerativeAIEmbeddings) but got a Resource has been exhausted error.
+
+### Step 4: Building the RAG
+
+After going through all the previous steps, we need to build our educated rag. For the rag, I had several options to adopts, one of them is the MMR that strives to achieve both relevance to the query to the query and diversity among the results, but that was not my case. I also explored the TFIDF retriever and the SVM retriever, and got exposed to how to combine several techniques using contextual compression retriever that wraps a based retriever (for example vector db with mmr search type retriever) and compresses the results using an llm (compression helps with filtering and refining documents and reordering based on query relevance).
+
+However, none of the above approaches was relevant to my case where I will be capable of educating my search. None except the big guy, the self query retriever, the one that is capable of using our earlier created meta data to filter out where to look based on the user query. In the following figure, you may check the architecture of this retriever and observe its greatness.
+
+<img width="900" height="231" alt="image" src="https://github.com/user-attachments/assets/b98c6585-ff16-4354-8a88-9f82914a89c4" />
+
+Note that for this retriever to perform this search, it needs to be provided with a metadata info field where you describe metadata of your documents.
+
+You may think that this is the end, but no, there is a small present to give. If you want to further refine your results, you might consider adding the early powerful retriever to a conversational chain that will combine the retrieval based methods with conversational capabilities. This chain has an attribute called chain type that determines how retrieved context is combined and reasoned over so that the answers are to answer the question complexity and context size. Note that after conducting some experiments with different chain types retrievals and of course with an llm as a judge, I decided to use the stuff chain type.
+
+For further reference on chain types, you may refer to the following table:
+
+| Chain type            | How it works                                     | Best for                                     | Pros                            | Cons                                           |
+| --------------------- | ------------------------------------------------ | -------------------------------------------- | ------------------------------- | ---------------------------------------------- |
+| stuff                 | Concatenate all retrieved chunks into one prompt | Few, short, highly relevant chunks           | Fast, cheap, simple             | Token-limit bound; brittle if noisy/long       |
+| map\_reduce           | Per-doc answers → combine                        | Cross-doc synthesis, longer contexts         | Scales to many docs; robust     | Slower, pricier; reducer must be well-prompted |
+| refine                | Build an answer incrementally doc-by-doc         | Progressive enrichment (tutorials, stepwise) | Captures details as they appear | Order-sensitive; can propagate early mistakes  |
+| map\_rerank (scoring) | Per-doc answers + confidence → pick best         | When answer likely in one doc                | High precision; clear source    | Misses answers needing multi-doc synthesis     |
+
+### The RAG Class:
+
+Before creating the rag tool that is to be deployed on the mcp server, I asked chatgpt to wrap my methods in one class, and he did so. What was provided was interesting, he did a metadata filter that can constraint the search by applying a strict metadata filter approach. However, after trying this class, I decided not to use it because although it is not my filter and could not evaluate it properly so that I am in full control of the code. I commented the code in the rag.py file in the rag setup directory in case someone wishes to check it on his own and refine it.
+
+This being said, I want to note that I wrote the other class by myself where I am in full control of the code where I combined the notebook steps together. Also, I could not help but mention what drove me not to use the class I writer is trusting the llm that is in the self query retriever to interpret the natural language hints and not use the metadata hard filters after receiving a query that is un ambiguous at all. Creating this clear query will be explained in details when I dive into the architecture og my llm agent.
+
+### The RAG Tool: 4 tools in 1
+
+After spending too much time building this rag, the rag tool should benefit from every single aspect provided by this educated rag. I want to note before diving into this tool details, I watched a one hour tutorial titled pydantic for llm workflows discussing how to build input and output pydantic models to dictate how you wish your inputs and outputs to be like. You will notice that 2 models were used with the tools itself.
+
+Our rag tool is called probe topic. It has 2 main parameters and one optional parameter (lectures).
+
+The 2 main parameters are the topic and the intent, the topic representing the topic the user is querying (extracted by the llm that uses this tool) and the intent (the most crucial parameter that decides how we are to use our rag). You may notice in the code that we have 5 different intents.
+
+The persense intent: when declared, the rag will check only if the topic is explicitly mentioned in the syllabus. The resources intent: will be called in case the topic is present so that the rag retrieves the lectures that are associated with this topic based on the syllabus. The above two intents will be use by the relevancer agent to check if the topic is present first hand and retrieve its corresponding lectures if so to direct the work of other agents.
+
+The following three intents are similar in functionality, but each has its own scope of search.
+
+The material intent will educate the rag to search only in the chapters metadata (where lectures are found), this will be used by the concept explainer agent to refer to the topic related lectures to answer clarification questions.
+
+The exercises intent is used in case the user wants to practice on some topic. In this case, we will scrape in the assignments (specific to lectures where the topic is present) to generate similar exercises. The tests intent is used in case the user want to have a test, in this case we will scrape the exams to build similar questions. Those two intents will be used by the exercise generator agent. This agent will be supplied with the lectures related to the topic and since the metadata of the assignments are attached to the lectures metadata, the search is made feasible and clear.
+
+### References:
+
+To be capable of doing all the above, there were three tutorials that I used their resources in addition to the langchain docs second hand and some other websites.
+
+* [https://www.deeplearning.ai/short-courses/langchain-chat-with-your-data/](https://www.deeplearning.ai/short-courses/langchain-chat-with-your-data/)
+* [https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/](https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/)
+* [https://www.deeplearning.ai/short-courses/pydantic-for-llm-workflows/](https://www.deeplearning.ai/short-courses/pydantic-for-llm-workflows/)
+* [https://www.youtube.com/watch?v=lnm0PMi-4mE\&t=29s](https://www.youtube.com/watch?v=lnm0PMi-4mE&t=29s)
