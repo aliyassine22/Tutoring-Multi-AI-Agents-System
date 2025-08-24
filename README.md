@@ -316,15 +316,15 @@ The progress that was made and the way I developed and tested the tools one by o
 medium article (waste of time): [https://medium.com/google-cloud/building-a-multi-agent-application-to-interact-with-google-products-b7ff7eb2f17d](https://medium.com/google-cloud/building-a-multi-agent-application-to-interact-with-google-products-b7ff7eb2f17d)
 
 ---
-
-## Deployment on MCP server
+## Deployment
+### Deployment of tools on MCP server
 
 Those tools in addition to the probe topic tool (rag tool) were deployed on an fast mcp server running with server sent events for transport where they are made available to different agents. Note that calling the tools by adk agents is a simple process that requires no more than using the mcp tool set with an sse connection object and a tool filter. However, it took me some time to figure out how to connect the langGraph based agents to their probe tool while enabling the a2a protocol.
  
 
 ---
 
-## A2A Protocol
+### A2A Protocol
 
 For setting up the a2a protocol, I referred first to a youtube tutorial to understand the intuitions behind this protocol and review the implementation. After that, my colleague at inmind academy Mohamad Shoeib referred me to a robust medium article that provides the general structure for the a2a communication protocol. **note** that I had to introduce some changes to the code to make it compatible with my case.
 
@@ -342,8 +342,15 @@ Now that our langGraph based agent is successfully deployed using an a2a server,
 In the next section, I am going to discuss the prompt template that I have adopted with my agents.
 
 ---
+### Fastapi integration
 
-## References
+To deploy my agent, I built a fastapi application that serves as an interface to the google adk runner. At server startup, I initialize a single, persistent runner instance. This runner is configured with my root agent, an InMemorySessionService to manage conversational state, and an InMemoryMemoryService to provide the agent with long-term memory. By creating this runner only once, I avoid the overhead of re-initializing the agent and its services for every incoming request. However, even though things happened exactly according as stated and directed in the google documentation, I could not figure out why the agent has no memory and wan’t keeping track of the conversation. Hence, this will be further investigated and once I resolve the issue, the solution will be hopefully provided.
+**note** that I have also tried to stream my outputs following the exact deployment steps found in the reference (google adk streaming) but was not capable to due to a pydantic error that I kept facing. Hence, I just adopted the regular approach without streaming and being organized.
+Those issues will be resolved hopefully in the upcoming releases.
+
+---
+
+### References:
 
 The following references where mainly used in the development of the adk agents and the mcp and a2a protocol.
 [https://www.youtube.com/watch?v=P4VFL9nIaIA](https://www.youtube.com/watch?v=P4VFL9nIaIA)
@@ -351,7 +358,11 @@ The following references where mainly used in the development of the adk agents 
 [https://www.youtube.com/watch?v=mFkw3p5qSuA](https://www.youtube.com/watch?v=mFkw3p5qSuA)
 [https://medium.com/@aditya\_shenoyy/google-a2a-enabling-existing-langgraph-agents-to-work-with-the-google-a2a-protocol-using-adk-6358e08cae6d](https://medium.com/@aditya_shenoyy/google-a2a-enabling-existing-langgraph-agents-to-work-with-the-google-a2a-protocol-using-adk-6358e08cae6d)
 [https://www.youtube.com/watch?v=HkzOrj2qeXI](https://www.youtube.com/watch?v=HkzOrj2qeXI)
- 
+
+the following references were used for fast api deployment:
+[https://google.github.io/adk-docs/get-started/testing](https://google.github.io/adk-docs/get-started/testing)
+[https://google.github.io/adk-docs/streaming/custom-streaming](https://google.github.io/adk-docs/streaming/custom-streaming)
+[https://youtu.be/HAJvxR8Hf6w?si=SERc\_ANisOKw1M73](https://youtu.be/HAJvxR8Hf6w?si=SERc_ANisOKw1M73)
 
 ---
 
@@ -388,17 +399,3 @@ I want to **note** that this prompt template was not reached from the first shot
 [https://www.youtube.com/watch?v=77Z07QnLlB8](https://www.youtube.com/watch?v=77Z07QnLlB8)
 
 ---
-
-## Fastapi integration
-
-To deploy my agent, I built a fastapi application that serves as an interface to the google adk runner. At server startup, I initialize a single, persistent runner instance. This runner is configured with my root agent, an InMemorySessionService to manage conversational state, and an InMemoryMemoryService to provide the agent with long-term memory. By creating this runner only once, I avoid the overhead of re-initializing the agent and its services for every incoming request. However, even though things happened exactly according as stated and directed in the google documentation, I could not figure out why the agent has no memory and wan’t keeping track of the conversation. Hence, this will be further investigated and once I resolve the issue, the solution will be hopefully provided.
-**note** that I have also tried to stream my outputs following the exact deployment steps found in the reference (google adk streaming) but was not capable to due to a pydantic error that I kept facing. Hence, I just adopted the regular approach without streaming and being organized.
-Those issues will be resolved hopefully in the upcoming releases.
-
----
-
-### References:
-
-[https://google.github.io/adk-docs/get-started/testing](https://google.github.io/adk-docs/get-started/testing)
-[https://google.github.io/adk-docs/streaming/custom-streaming](https://google.github.io/adk-docs/streaming/custom-streaming)
-[https://youtu.be/HAJvxR8Hf6w?si=SERc\_ANisOKw1M73](https://youtu.be/HAJvxR8Hf6w?si=SERc_ANisOKw1M73)
