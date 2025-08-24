@@ -17,6 +17,8 @@ Retrieving correct information is core to this project. It took \~3 days of focu
 
 *Side note:* see the **RAGs notebook** directory for a step-by-step build. Early commits may contain rough prompt experiments.
 
+---
+
 ### Step 0: Organizing the Data
 
 Before loading, the data was structured to enable smooth metadata extraction that would later “educate” the RAG search.
@@ -32,6 +34,8 @@ At the document level, each chapter section is attached to its lectures and cour
 The same applies to the **assignments** directory:
 
 <img width="576" height="29" alt="image" src="https://github.com/user-attachments/assets/5256e031-9aae-406c-8a24-44dcc915e5a1" />
+
+---
 
 ### Step 1: Loading the Data
 
@@ -49,6 +53,8 @@ I initially used the **PyPDF** loader, but it struggled with complex equations a
 | Vector graphics & layering                   | Ignored                                                 | Access to drawing objects and layers (useful for layout cues)                                 |
 | Large/complex PDFs performance               | Slower; can choke on heavy objects                      | Faster, robust on big/complex docs                                                            |
 
+---
+
 ### Step 1.5: Metadata
 
 Managing metadata is crucial for an effective RAG. Each chunk inherits its parent page’s metadata (category, chapter, lecture, flags, filename, relpath, etc.). When the vector store is built, this metadata lives alongside embeddings, enabling fine-grained filtering at the **chunk** level.
@@ -59,6 +65,8 @@ I started with essentials (course ID, category, chapter, document ID, filename, 
 * Extract indexes to later filter/group by number.
 * Detect lecture numbers and record single vs range coverage (`lecture_min`, `lecture_max`, `has_multiple_lectures`).
 * Flag solution files (`is_solution = true`) to handle them differently (e.g., exclude or emphasize).
+
+---
 
 ### Step 2: Splitting the Documents
 
@@ -79,6 +87,7 @@ I used a **recursive character splitter** for hierarchical splitting and context
 
 **Chunking choices:** overlap set to **10%** of chunk size. I tested sizes **500**, **1000**, and **1500** tokens; **500** performed best (tighter semantic focus, less noise). Larger chunks also require larger overlaps, increasing duplication—another reason to prefer 500 here.
 
+---
 
 ### Step 3: Vector Stores and Embeddings
 
@@ -89,6 +98,8 @@ Before doing my research, I was curious why Harrison Chase, Lang Chain’s CEO, 
 After doing my research, it turned out that chroma is an easy to use vector db that is designed to be used for llm and semantic search ai applications, known for it scalability, and more importantly specifically optimized for storing, indexing, and querying high-dimensional vector embeddings using approximate nearest-neighbor search. But this is not all, the main reason I didn’t even think of trying out other options is the metadata filtering. Chroma stores structured metadata alongside each vector and apply hard filters before vector search where it combine Boolean/meta filters and semantic scores in one pass for precision.
 
 As for the embeddings, I adopted the open ai embeddings, the one Harrison Chase use. It is known that open ai embedding models produce rich, general purpose representations that capture semantic meanings across text, equations, code snippets. **note** that I also thought of trying out other embeddings (the GoogleGenerativeAIEmbeddings) but got a Resource has been exhausted error.
+
+---
 
 ### Step 4: Building the RAG
 
@@ -111,11 +122,15 @@ For further reference on chain types, you may refer to the following table:
 | refine                | Build an answer incrementally doc-by-doc         | Progressive enrichment (tutorials, stepwise) | Captures details as they appear | Order-sensitive; can propagate early mistakes  |
 | map\_rerank (scoring) | Per-doc answers + confidence → pick best         | When answer likely in one doc                | High precision; clear source    | Misses answers needing multi-doc synthesis     |
 
+---
+
 ### The RAG Class:
 
 Before creating the rag tool that is to be deployed on the mcp server, I asked chatgpt to wrap my methods in one class, and he did so. What was provided was interesting, he did a metadata filter that can constraint the search by applying a strict metadata filter approach. However, after trying this class, I decided not to use it because although it is not my filter and could not evaluate it properly so that I am in full control of the code. I commented the code in the rag.py file in the rag setup directory in case someone wishes to check it on his own and refine it.
 
 This being said, I want to **note** that I wrote the other class by myself where I am in full control of the code where I combined the notebook steps together. Also, I could not help but mention what drove me not to use the class I writer is trusting the llm that is in the self query retriever to interpret the natural language hints and not use the metadata hard filters after receiving a query that is un ambiguous at all. Creating this clear query will be explained in details when I dive into the architecture og my llm agent.
+
+---
 
 ### The RAG Tool: 4 tools in 1
 
@@ -133,6 +148,8 @@ The material intent will educate the rag to search only in the chapters metadata
 
 The exercises intent is used in case the user wants to practice on some topic. In this case, we will scrape in the assignments (specific to lectures where the topic is present) to generate similar exercises. The tests intent is used in case the user want to have a test, in this case we will scrape the exams to build similar questions. Those two intents will be used by the exercise generator agent. This agent will be supplied with the lectures related to the topic and since the metadata of the assignments are attached to the lectures metadata, the search is made feasible and clear.
 
+---
+
 ### References:
 
 To be capable of doing all the above, there were three tutorials that I used their resources in addition to the langchain docs second hand and some other websites.
@@ -142,6 +159,7 @@ To be capable of doing all the above, there were three tutorials that I used the
 * [https://www.deeplearning.ai/short-courses/pydantic-for-llm-workflows/](https://www.deeplearning.ai/short-courses/pydantic-for-llm-workflows/)
 * [https://www.youtube.com/watch?v=lnm0PMi-4mE\&t=29s](https://www.youtube.com/watch?v=lnm0PMi-4mE&t=29s)
 
+---
 
 ## Building our LangGraph based agents:
 
@@ -150,13 +168,14 @@ As for the adopted react agent, you may find the architecture in the following f
 
 <img width="310" height="373" alt="image" src="https://github.com/user-attachments/assets/47c13967-b997-488e-acf5-39aa52eba36b" />
 
-
 Briefly going over the architecture, this agent is composed of two main nodes, the llm node were the model that is bound to tools reads the accumulated messages, injects the system prompt once, and either answers directly or emits structured tool\_calls. As for the tools node, it executes those calls, returns tool messages and loops control back to the llm  until no further actions are needed.
 Now for our agents, I built an independent graph for every agent although the graph implementation was given with react agent, all for the sake of having structured outputs for every agent. Please find the architecture of our LangGraph based tutoring agent in the following figure:
 
 <img width="698" height="369" alt="image" src="https://github.com/user-attachments/assets/9504a740-e20b-4cd1-a9f2-3fb0ed0b95eb" />
 
 The above graph represents a high level view of our tutoring agent.
+
+---
 
 ### Relevancer agent
 
@@ -170,6 +189,8 @@ Spoiler alert, this is the correct output I have got after fixing my prompt.
 
 <img width="900" height="149" alt="image" src="https://github.com/user-attachments/assets/6aba7da1-6336-49ea-ae8e-c8cb5fe78426" />
 
+---
+
 ### Planner agent
 
 As for the second agent, the planner, this agent will create a plan for tutoring session after scraping the lectures that are handed from the relevancer agent related to the user topic and send this plan for approval.
@@ -178,10 +199,14 @@ Below is a sample output from the planner agent:
 
 <img width="900" height="476" alt="image" src="https://github.com/user-attachments/assets/2100e96c-103f-4129-9793-0afe5ecdc2c4" />
 
+---
+
 ### When to format **note**
 
 •	In case your output is to be returned to the user, adopt a markdown format in your prompt as I did with the concept explainer and the exercise generator agent and must have done with the planner agent instead of formatting the json output which happened to be useless.
 •	In case your output is to be used by other agents in a sequential workflow, it must be in a json format so that you are to extract useful info and pass it down to those agents to use, there is no other choice.
+
+---
 
 ### Conceptor agent
 
@@ -191,12 +216,16 @@ This agent relies on topic related lectures to answer the user inquiry questions
 
 Note that this format will be read properly on our frontend and will be shown at the end of this readme in the demo section
 
+---
+
 ### Exercise generator agent
 
 This guy calls the probe topic tool twice, the first to scrape the lectures for the assignment’s information, and the second to scrape the assignments and get relevant exercises. I would have also further extended this agent with an option to scrape exams, however I got shortened on time. To do so, the prompt will need to be updated in the following manner so that the agent will follow also 2 tool calls strategy but of course with an addition of an extra flag in the relevancer agent called scrape\_test. The prompt will be extended to the current version to accommodate to this parameter, in case the flag is set to false, the current workflow will be undergone. However, if the flag is true, we will need to call our probe tool in a different strategy where the first call will be with scope syllabus and intent material to check for the exams’ questions related to the topic and the second with intent tests to go over the tests and retrieve relevant samples.
 This is a sample output of our exercise generator in a markdown format:
 
 <img width="1080" height="509" alt="image" src="https://github.com/user-attachments/assets/8e162375-819c-4d5e-ba46-884056ebd532" />
+
+---
 
 ### Building the whole thing
 
@@ -205,10 +234,14 @@ In the following image, you will observe two subgraphs (relevancer and planner) 
 
 <img width="494" height="1331" alt="image" src="https://github.com/user-attachments/assets/4e443f72-fe71-4956-90cf-4d397e7d3393" />
 
+---
+
 ### Final note
 
 At the stage of building prompts, I did not have enough time to record every change I did and every trial because I was losing time. At that stage and after finding the prompt template to adopt, my whole purpose was to make things work. In the rag notebook, things turned out to be messy as we tend to the end because I was running different cells in different orders only for the sake of testing, that’s why you might find it hard to follow up with the rag notebook as it tend to the end unless you run it in order. I apologize for confusion. You may find my first developed prompts before getting the prompt schema and adopting and tweaking it in the builder notebook.
 The changes to the prompt template were done directly in the buildup and were not recorded due to the deadline emerging and full focus on developing an ultimate working product. The template will be provided and explained so that others may benefit from it in another section (working with the prompt was the most stressful and thrilling thing that I have done throughout this project).
+
+---
 
 ### References
 
@@ -216,11 +249,15 @@ The changes to the prompt template were done directly in the buildup and were no
 [https://academy.langchain.com/courses/take/intro-to-langgraph](https://academy.langchain.com/courses/take/intro-to-langgraph) , specifically module 2 and 4
 **note** that the source codes of each course are downloaded locally. 
 
+---
+
 ## ADK based agents
 
 ### General Overview
 
 For our adk agents, I wanted to adopt a high level structure that will utilize the power of the google open api. For that reason, I decided to ensure the user communication track with the tutoring agent acting on behalf of the tutor via google gmail and calendar tools.
+
+---
 
 ### Calendar Agent
 
@@ -243,9 +280,13 @@ This tool was to be used in one scenario, in case the user want to unbook in a 6
 
 This tool in case it is to be used is to be used by the tutors not the students, so currently it has no available use case. However, if we decided to extend this agent into a full scaled product that works with both parties (tutors and students, not only students), this tool will be of great benefit. To be honest, I only used this tool in the current scenario so that an agent creates the available tutoring session events on my behalf (I did not want to do this process manually).
 
+---
+
 ### Gmail Agent
 
 This agent will be the one responsible for sending emails of the plan accompanied by the meeting link to the students using the send email tool. **note** that I had initially a different vision for this agent, that is it draft emails for the tutor with the plan embedded with them and the tutor in this case will need only to send (him sending the email is the approval). However, if we investigate things from a broader perspective, we will notice that the student is more familiar with what he needs to be tutored on, thus it would be more reasonable for the plan once approved by the student to be sent directly to the student. Hence, the draft email (for the tutor) tool was changed to the send email (to the student) tool.
+
+---
 
 ### Crucial Gap: authentication
 
@@ -256,8 +297,13 @@ As for the authentication issue (you need to authenticate every time you want to
 
 Whenever a user calls a Google API, they must authenticate. According to the joogle API docs, you should place a credentials.json file (your OAuth client credentials) in the same directory as your application. After the first sign-in, the library creates a token.json file that stores the user’s access and refresh tokens. If this file is present and valid, the app can make subsequent requests without prompting the user to authenticate again. Since it is more likely for tokens to expire or become invalid, I always insured the authentication will take place whenever a google tool call is issued.
 
+---
+
 ### Note
+
 The progress that was made and the way I developed and tested the tools one by one can be tracked by referring to the adk agents notebook.
+
+---
 
 ### References:
 
@@ -265,10 +311,14 @@ The progress that was made and the way I developed and tested the tools one by o
 [https://developers.google.com/workspace/calendar/api/guides/overview](https://developers.google.com/workspace/calendar/api/guides/overview)
 medium article (waste of time): [https://medium.com/google-cloud/building-a-multi-agent-application-to-interact-with-google-products-b7ff7eb2f17d](https://medium.com/google-cloud/building-a-multi-agent-application-to-interact-with-google-products-b7ff7eb2f17d)
 
+---
+
 ## Deployment on MCP server
 
 Those tools in addition to the probe topic tool (rag tool) were deployed on an fast mcp server running with server sent events for transport where they are made available to different agents. Note that calling the tools by adk agents is a simple process that requires no more than using the mcp tool set with an sse connection object and a tool filter. However, it took me some time to figure out how to connect the langGraph based agents to their probe tool while enabling the a2a protocol.
  
+
+---
 
 ## A2A Protocol
 
@@ -287,6 +337,8 @@ Now that our langGraph based agent is successfully deployed using an a2a server,
 **note** that the adk agents were created in the same file as the orchestrator.
 In the next section, I am going to discuss the prompt template that I have adopted with my agents.
 
+---
+
 ## References
 
 The following references where mainly used in the development of the adk agents and the mcp and a2a protocol.
@@ -296,6 +348,8 @@ The following references where mainly used in the development of the adk agents 
 [https://medium.com/@aditya\_shenoyy/google-a2a-enabling-existing-langgraph-agents-to-work-with-the-google-a2a-protocol-using-adk-6358e08cae6d](https://medium.com/@aditya_shenoyy/google-a2a-enabling-existing-langgraph-agents-to-work-with-the-google-a2a-protocol-using-adk-6358e08cae6d)
 [https://www.youtube.com/watch?v=HkzOrj2qeXI](https://www.youtube.com/watch?v=HkzOrj2qeXI)
  
+
+---
 
 ## Prompt template
 
@@ -322,10 +376,14 @@ This is a brief explanation for each section in the prompt in case you are inter
 | Tone & Style                     | Sets the voice, style and communication guidelines. System prompts should specify style (e.g., “Be concise; no emojis”). The persona based prompting pattern instructs the model to adopt a specific tone and avoid insults.                                                                                             |
 | Safety & Boundaries / Guardrails | Explicit guardrails tell the model what to avoid, such as “never reveal private keys”. Constraints also cover risk boundaries like cost or latency budgets and refusal policies for out of scope requests.                                                                                                               |
 
+---
+
 ### Resources
 
 I want to **note** that this prompt template was not reached from the first shot, it was influenced by from an n8n tutorial, anyone interested in boosting his prompt is advised to look in the n8n community. **note** that on n8n, there are too many great prompts that I did not have enough time to experiment with. As for this template, it was built step by step in parallel with this reference and more additional sections were added based on the result.
 [https://www.youtube.com/watch?v=77Z07QnLlB8](https://www.youtube.com/watch?v=77Z07QnLlB8)
+
+---
 
 ## Fastapi integration
 
@@ -333,9 +391,10 @@ To deploy my agent, I built a fastapi application that serves as an interface to
 **note** that I have also tried to stream my outputs following the exact deployment steps found in the reference (google adk streaming) but was not capable to due to a pydantic error that I kept facing. Hence, I just adopted the regular approach without streaming and being organized.
 Those issues will be resolved hopefully in the upcoming releases.
 
+---
+
 ### References:
 
 [https://google.github.io/adk-docs/get-started/testing](https://google.github.io/adk-docs/get-started/testing)
 [https://google.github.io/adk-docs/streaming/custom-streaming](https://google.github.io/adk-docs/streaming/custom-streaming)
 [https://youtu.be/HAJvxR8Hf6w?si=SERc\_ANisOKw1M73](https://youtu.be/HAJvxR8Hf6w?si=SERc_ANisOKw1M73)
-
