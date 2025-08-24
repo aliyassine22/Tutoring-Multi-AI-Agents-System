@@ -1,3 +1,7 @@
+## Requirements note
+
+In the following project, all the requirements are met. The only thing i did not do is finetuning a small language model.
+
 ## High-Level Architecture
 
 <img width="900" height="343" alt="image" src="https://github.com/user-attachments/assets/8a4574a9-ab02-4dfa-ab01-296146b4e571" />
