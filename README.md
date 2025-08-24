@@ -399,8 +399,26 @@ I want to **note** that this prompt template was not reached from the first shot
 [https://www.youtube.com/watch?v=77Z07QnLlB8](https://www.youtube.com/watch?v=77Z07QnLlB8)
 
 ---
+### Sample Outputs
 
-## Whats next
+Exersise generated:
+<img width="427" height="612" alt="Screenshot 2025-08-23 170957" src="https://github.com/user-attachments/assets/f1a6be6f-ebcd-4ec3-87cb-fbdceb3e0605" />
+
+Concept explained:
+<img width="640" height="458" alt="Screenshot 2025-08-23 171017" src="https://github.com/user-attachments/assets/4f9695b8-6c90-4de4-9e71-2c37d3e7ad0d" />
+
+Plan organized:
+<img width="728" height="303" alt="Screenshot 2025-08-23 171026" src="https://github.com/user-attachments/assets/7f9c591d-a706-46fe-a367-b390c9bc209b" />
+
+Memory Issue:
+<img width="892" height="597" alt="Screenshot 2025-08-24 173847" src="https://github.com/user-attachments/assets/863d78bd-67d7-4239-af3c-719c2006ea3a" />
+
+---
+### Final Note
+
+I want to note that in case you tryout running the agent using adk web, you will notice that every function is working properly since the memory element is not lost there.
+
+### Whats next
 
 1. fix the memory issue
 2. refine the prompt of the orchestrator
