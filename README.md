@@ -256,7 +256,7 @@ As for the authentication issue (you need to authenticate every time you want to
 
 Whenever a user calls a Google API, they must authenticate. According to the joogle API docs, you should place a credentials.json file (your OAuth client credentials) in the same directory as your application. After the first sign-in, the library creates a token.json file that stores the user’s access and refresh tokens. If this file is present and valid, the app can make subsequent requests without prompting the user to authenticate again. Since it is more likely for tokens to expire or become invalid, I always insured the authentication will take place whenever a google tool call is issued.
 
-\###Note
+### Note
 The progress that was made and the way I developed and tested the tools one by one can be tracked by referring to the adk agents notebook.
 
 ### References:
