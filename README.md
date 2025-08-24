@@ -273,12 +273,17 @@ Those tools in addition to the probe topic tool (rag tool) were deployed on an f
 ## A2A Protocol
 
 For setting up the a2a protocol, I referred first to a youtube tutorial to understand the intuitions behind this protocol and review the implementation. After that, my colleague at inmind academy Mohamad Shoeib referred me to a robust medium article that provides the general structure for the a2a communication protocol. Note that I had to introduce some changes to the code to make it compatible with my case.
+
 This a2a server implementation provides a web interface for our langGraph based agent. It begins by defining an agent card, which acts as a public profile, advertising the agent's name, capabilities (streaming), and specific skills. The core of the server is the A2AStarletteApplication that listens to http requests and passes them to the default DefaultRequestHandler that uses a custom LanggraphAgentExecutor to manage the actual task execution. When a user query is received, the executor streams the input into the langGraph agent, which maintains conversational state using a thread id. As the graph processes the request through its various nodes, the executor uses an event queue and a task updater to send real time progress messages back to the client, finally delivering a completion message when the graph reaches its end state.
+
 Our langGraph agent was successfully deployed on an a2a server following the above process, but throughout this integration I faced an issue with the langGraph agent being unable to connect to the mcp server. I got this error because I thought the notebook practices in calling tools after connecting the mcp session can be applied directly when invoking the same functionalities in the python file. This confusion took me a while to catch, it is working there but not here, why so?
+
 At the beginning, I thought that the error is due to timeouts, so I insured the timeout was more than sufficient, but that was not the case. The case was due to losing connection to my mcp server when I instantiate my langGraph based agent. To fix it, one must ensure that the mcp server is instantiated outside of the method that returns langGraph and before this method is called, and that is exactly what happened.
+
 There is one more thing that I cannot avoid mentioning, that is the astream method that provides an asynchronous way to stream outputs from a graph execution. In this method, you may notice that I have set the stream mode to values. This was done so that a complete snapshot of the entire graph's state is returned after each node executes, thus making tracking feasible. In contrast, modes like 'updates' or 'messages' would only provide partial information, such as the output of the last node, preventing this level of stateful tracking.
  
 Now that our langGraph based agent is successfully deployed using an a2a server, what is going to happen next is that we will connect our orchestrator, an adk based root agent with having the calendar and gmail agents as subagent with our langGraph agent (the prime agent) as a subgraph.
+
 Note that the adk agents were created in the same file as the orchestrator.
 In the next section, I am going to discuss the prompt template that I have adopted with my agents.
 
