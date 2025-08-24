@@ -88,7 +88,7 @@ Before doing my research, I was curious why Harrison Chase, Lang Chain’s CEO, 
 
 After doing my research, it turned out that chroma is an easy to use vector db that is designed to be used for llm and semantic search ai applications, known for it scalability, and more importantly specifically optimized for storing, indexing, and querying high-dimensional vector embeddings using approximate nearest-neighbor search. But this is not all, the main reason I didn’t even think of trying out other options is the metadata filtering. Chroma stores structured metadata alongside each vector and apply hard filters before vector search where it combine Boolean/meta filters and semantic scores in one pass for precision.
 
-As for the embeddings, I adopted the open ai embeddings, the one Harrison Chase use. It is known that open ai embedding models produce rich, general purpose representations that capture semantic meanings across text, equations, code snippets. Note that I also thought of trying out other embeddings (the GoogleGenerativeAIEmbeddings) but got a Resource has been exhausted error.
+As for the embeddings, I adopted the open ai embeddings, the one Harrison Chase use. It is known that open ai embedding models produce rich, general purpose representations that capture semantic meanings across text, equations, code snippets. **note** that I also thought of trying out other embeddings (the GoogleGenerativeAIEmbeddings) but got a Resource has been exhausted error.
 
 ### Step 4: Building the RAG
 
@@ -98,9 +98,9 @@ However, none of the above approaches was relevant to my case where I will be ca
 
 <img width="900" height="231" alt="image" src="https://github.com/user-attachments/assets/b98c6585-ff16-4354-8a88-9f82914a89c4" />
 
-Note that for this retriever to perform this search, it needs to be provided with a metadata info field where you describe metadata of your documents.
+**note** that for this retriever to perform this search, it needs to be provided with a metadata info field where you describe metadata of your documents.
 
-You may think that this is the end, but no, there is a small present to give. If you want to further refine your results, you might consider adding the early powerful retriever to a conversational chain that will combine the retrieval based methods with conversational capabilities. This chain has an attribute called chain type that determines how retrieved context is combined and reasoned over so that the answers are to answer the question complexity and context size. Note that after conducting some experiments with different chain types retrievals and of course with an llm as a judge, I decided to use the stuff chain type.
+You may think that this is the end, but no, there is a small present to give. If you want to further refine your results, you might consider adding the early powerful retriever to a conversational chain that will combine the retrieval based methods with conversational capabilities. This chain has an attribute called chain type that determines how retrieved context is combined and reasoned over so that the answers are to answer the question complexity and context size. **note** that after conducting some experiments with different chain types retrievals and of course with an llm as a judge, I decided to use the stuff chain type.
 
 For further reference on chain types, you may refer to the following table:
 
@@ -115,7 +115,7 @@ For further reference on chain types, you may refer to the following table:
 
 Before creating the rag tool that is to be deployed on the mcp server, I asked chatgpt to wrap my methods in one class, and he did so. What was provided was interesting, he did a metadata filter that can constraint the search by applying a strict metadata filter approach. However, after trying this class, I decided not to use it because although it is not my filter and could not evaluate it properly so that I am in full control of the code. I commented the code in the rag.py file in the rag setup directory in case someone wishes to check it on his own and refine it.
 
-This being said, I want to note that I wrote the other class by myself where I am in full control of the code where I combined the notebook steps together. Also, I could not help but mention what drove me not to use the class I writer is trusting the llm that is in the self query retriever to interpret the natural language hints and not use the metadata hard filters after receiving a query that is un ambiguous at all. Creating this clear query will be explained in details when I dive into the architecture og my llm agent.
+This being said, I want to **note** that I wrote the other class by myself where I am in full control of the code where I combined the notebook steps together. Also, I could not help but mention what drove me not to use the class I writer is trusting the llm that is in the self query retriever to interpret the natural language hints and not use the metadata hard filters after receiving a query that is un ambiguous at all. Creating this clear query will be explained in details when I dive into the architecture og my llm agent.
 
 ### The RAG Tool: 4 tools in 1
 
@@ -178,7 +178,7 @@ Below is a sample output from the planner agent:
 
 <img width="900" height="476" alt="image" src="https://github.com/user-attachments/assets/2100e96c-103f-4129-9793-0afe5ecdc2c4" />
 
-### When to format Note
+### When to format **note**
 
 •	In case your output is to be returned to the user, adopt a markdown format in your prompt as I did with the concept explainer and the exercise generator agent and must have done with the planner agent instead of formatting the json output which happened to be useless.
 •	In case your output is to be used by other agents in a sequential workflow, it must be in a json format so that you are to extract useful info and pass it down to those agents to use, there is no other choice.
@@ -214,7 +214,7 @@ The changes to the prompt template were done directly in the buildup and were no
 
 [https://www.deeplearning.ai/short-courses/ai-agents-in-langgraph/](https://www.deeplearning.ai/short-courses/ai-agents-in-langgraph/)
 [https://academy.langchain.com/courses/take/intro-to-langgraph](https://academy.langchain.com/courses/take/intro-to-langgraph) , specifically module 2 and 4
-note that the source codes of each course are downloaded locally. 
+**note** that the source codes of each course are downloaded locally. 
 
 ## ADK based agents
 
@@ -245,7 +245,7 @@ This tool in case it is to be used is to be used by the tutors not the students,
 
 ### Gmail Agent
 
-This agent will be the one responsible for sending emails of the plan accompanied by the meeting link to the students using the send email tool. Note that I had initially a different vision for this agent, that is it draft emails for the tutor with the plan embedded with them and the tutor in this case will need only to send (him sending the email is the approval). However, if we investigate things from a broader perspective, we will notice that the student is more familiar with what he needs to be tutored on, thus it would be more reasonable for the plan once approved by the student to be sent directly to the student. Hence, the draft email (for the tutor) tool was changed to the send email (to the student) tool.
+This agent will be the one responsible for sending emails of the plan accompanied by the meeting link to the students using the send email tool. **note** that I had initially a different vision for this agent, that is it draft emails for the tutor with the plan embedded with them and the tutor in this case will need only to send (him sending the email is the approval). However, if we investigate things from a broader perspective, we will notice that the student is more familiar with what he needs to be tutored on, thus it would be more reasonable for the plan once approved by the student to be sent directly to the student. Hence, the draft email (for the tutor) tool was changed to the send email (to the student) tool.
 
 ### Crucial Gap: authentication
 
@@ -272,7 +272,7 @@ Those tools in addition to the probe topic tool (rag tool) were deployed on an f
 
 ## A2A Protocol
 
-For setting up the a2a protocol, I referred first to a youtube tutorial to understand the intuitions behind this protocol and review the implementation. After that, my colleague at inmind academy Mohamad Shoeib referred me to a robust medium article that provides the general structure for the a2a communication protocol. Note that I had to introduce some changes to the code to make it compatible with my case.
+For setting up the a2a protocol, I referred first to a youtube tutorial to understand the intuitions behind this protocol and review the implementation. After that, my colleague at inmind academy Mohamad Shoeib referred me to a robust medium article that provides the general structure for the a2a communication protocol. **note** that I had to introduce some changes to the code to make it compatible with my case.
 
 This a2a server implementation provides a web interface for our langGraph based agent. It begins by defining an agent card, which acts as a public profile, advertising the agent's name, capabilities (streaming), and specific skills. The core of the server is the A2AStarletteApplication that listens to http requests and passes them to the default DefaultRequestHandler that uses a custom LanggraphAgentExecutor to manage the actual task execution. When a user query is received, the executor streams the input into the langGraph agent, which maintains conversational state using a thread id. As the graph processes the request through its various nodes, the executor uses an event queue and a task updater to send real time progress messages back to the client, finally delivering a completion message when the graph reaches its end state.
 
@@ -284,7 +284,7 @@ There is one more thing that I cannot avoid mentioning, that is the astream meth
  
 Now that our langGraph based agent is successfully deployed using an a2a server, what is going to happen next is that we will connect our orchestrator, an adk based root agent with having the calendar and gmail agents as subagent with our langGraph agent (the prime agent) as a subgraph.
 
-Note that the adk agents were created in the same file as the orchestrator.
+**note** that the adk agents were created in the same file as the orchestrator.
 In the next section, I am going to discuss the prompt template that I have adopted with my agents.
 
 ## References
@@ -324,13 +324,13 @@ This is a brief explanation for each section in the prompt in case you are inter
 
 ### Resources
 
-I want to note that this prompt template was not reached from the first shot, it was influenced by from an n8n tutorial, anyone interested in boosting his prompt is advised to look in the n8n community. Note that on n8n, there are too many great prompts that I did not have enough time to experiment with. As for this template, it was built step by step in parallel with this reference and more additional sections were added based on the result.
+I want to **note** that this prompt template was not reached from the first shot, it was influenced by from an n8n tutorial, anyone interested in boosting his prompt is advised to look in the n8n community. **note** that on n8n, there are too many great prompts that I did not have enough time to experiment with. As for this template, it was built step by step in parallel with this reference and more additional sections were added based on the result.
 [https://www.youtube.com/watch?v=77Z07QnLlB8](https://www.youtube.com/watch?v=77Z07QnLlB8)
 
 ## Fastapi integration
 
 To deploy my agent, I built a fastapi application that serves as an interface to the google adk runner. At server startup, I initialize a single, persistent runner instance. This runner is configured with my root agent, an InMemorySessionService to manage conversational state, and an InMemoryMemoryService to provide the agent with long-term memory. By creating this runner only once, I avoid the overhead of re-initializing the agent and its services for every incoming request. However, even though things happened exactly according as stated and directed in the google documentation, I could not figure out why the agent has no memory and wan’t keeping track of the conversation. Hence, this will be further investigated and once I resolve the issue, the solution will be hopefully provided.
-Note that I have also tried to stream my outputs following the exact deployment steps found in the reference (google adk streaming) but was not capable to due to a pydantic error that I kept facing. Hence, I just adopted the regular approach without streaming and being organized.
+**note** that I have also tried to stream my outputs following the exact deployment steps found in the reference (google adk streaming) but was not capable to due to a pydantic error that I kept facing. Hence, I just adopted the regular approach without streaming and being organized.
 Those issues will be resolved hopefully in the upcoming releases.
 
 ### References:
