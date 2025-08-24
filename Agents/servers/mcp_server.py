@@ -81,11 +81,8 @@ def mcp_probe_topic(
     try:
         args = rag_tool.ProbeArgs(**data)  # raises ValidationError if bad
     except ValidationError as e:
-        # Return a structured error payload (still JSON-serializable)
         return {"error": "validation_error", "details": e.errors()}
 
-    # Call your underlying function with validated args.
-    # exclude_none avoids sending spurious None values.
     return rag_tool._probe_topic_fn(**args.model_dump(exclude_none=True))
 
 @mcp.tool(
