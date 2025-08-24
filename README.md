@@ -399,3 +399,11 @@ I want to **note** that this prompt template was not reached from the first shot
 [https://www.youtube.com/watch?v=77Z07QnLlB8](https://www.youtube.com/watch?v=77Z07QnLlB8)
 
 ---
+
+## Whats next
+
+1. fix the memory issue
+2. refine the prompt of the orchestrator
+3. add a robot agent authenticator
+4. build a database so that every user is to have is own session and own preferences
+5. the system is to be also deployed on tutors end, not only the student
