@@ -123,9 +123,17 @@ def referencer_output(state: AgentState):
 class PlannerStateModel(AgentState):
     plan: str
 def planner_output(state: AgentState):
-    res=json.loads(state['messages'][-1].content)
-    plan= res['plan']  # not critical
-    return {"plan": plan}
+    # res=json.loads(state['messages'][-1].content) # i don't want the user to see the plan as a json output, in case i want the json format so that i can use some sections of the outputs for aiding other agents, i might in this specific case consider adding a formatting_ agent or a json to markdown convertor 
+    """
+    Extracts the final plan text from the agent's last message
+    and prepares it for the graph's final output state.
+    """
+    # The agent's final message is a Markdown string, not JSON.
+    # Directly access the content from the last message.
+    session_plan = state['messages'][-1].content
+    # Return a dictionary to update the state according to the output_schema.
+    return {"answer": session_plan}
+
 
 class TutorStateModel(AgentState):
     purpose: str
@@ -287,7 +295,6 @@ You are a Signals & Systems tutoring planner.
 - *Multiple lectures:*
   - Aggregate materials across the selected lectures into *one* coherent SessionPlan.
   - "Objectives" and "Key Concepts (from materials)" should reflect the union of covered points (deduplicate; keep ~3–6 bullets each).
-  - "References (lectures)" must reflect the tool output. Prefer the original listing lines, or derive a clear line that preserves *Lecture/Chapter/filename/page*. Sort by lecture number when numeric.
 - *User lecture hints vs. tool results:*
   - If the user says "only lecture X", restrict to X even if the tool mentions others.
 
@@ -296,79 +303,82 @@ You are a Signals & Systems tutoring planner.
   - "Duration": "0 minutes"
   - Empty arrays for "Objectives", "Key Concepts (from materials)", "Agenda"
 
-### OUTPUT CONTRACT (one JSON object only; no prose)
-Respond *only* with a valid JSON object using these exact keys (strings). No extra keys, no explanations.
-{
-plan: {
-  "Title": "<topic>",
-  "Duration": "<N> minutes",
-  "Objectives": [
-    "<bullet>",
-    "<bullet>"
-  ],
-  "Key Concepts (from materials)": [
-    "<bullet>",
-    "<bullet>"
-  ],
-  "Agenda": [
-    "0-5: <bullet>",
-    "5-15: <bullet>",
-    "15-30: <bullet>",
-    "30-45: <bullet>"
-  ]
-}
-}
-### FEW-SHOT EXAMPLES (follow these patterns exactly; adapt to the actual tool "text")
-#### Example 1
-{
-  "Title": "Convolution in LTI systems",
-  "Duration": "45 minutes",
-  "Objectives": [
-    "Explain the convolution integral and key properties",
-    "Apply the graphical method to compute y(t)"
-  ],
-  "Key Concepts (from materials)": [
-    "Convolution integral y(t)=∫ x(τ)h(t-τ) dτ",
-    "Commutativity and associativity",
-    "Flip–shift–multiply–integrate graphical method"
-  ],
-  "Agenda": [
-    "0-5: Orient the student; recall LTI idea and impulse response",
-    "5-15: Derive convolution integral; discuss properties",
-    "15-30: Walk through rectangular pulse example (graphical)",
-    "30-45: Guided practice on a new x(t), h(t); recap takeaways"
-  ],
-  
-}
-#### Example 2
-{
-  "Title": "Impulse response and convolution",
-  "Duration": "60 minutes",
-  "Objectives": [
-    "Define and interpret impulse response h(t)",
-    "Relate y(t)=x(t)*h(t) to system behavior",
-    "Apply convolution properties in examples"
-  ],
-  "Key Concepts (from materials)": [
-    "Impulse response h(t) and LTI behavior",
-    "Output as convolution y(t)=x(t)*h(t)",
-    "Convolution properties with worked example"
-  ],
-  "Agenda": [
-    "0-10: Orientation; recap LTI and definition of h(t)",
-    "10-20: From h(t) to y(t)=x(t)*h(t) with intuition",
-    "20-35: Guided worked example using slides (Lecture 3)",
-    "35-50: Practice: short problems on h(t) and y(t)",
-    "50-60: Recap; checklist of properties and pitfalls"
-  ],
-}
+### OUTPUT FORMAT (markdown only; no prose)
+Respond **only** with Markdown using the following structure and section titles exactly.
 
+#### Header
+`## Tutoring Plan: <topic>`
+
+#### Duration
+`**Duration.** <N> minutes`
+
+#### Objectives
+A bulleted list (3–6 items):
+- <bullet>
+- <bullet>
+
+#### Key Concepts (from materials)
+A bulleted list (3–6 items), each supported by the tool "text":
+- <bullet>
+- <bullet>
+
+#### Agenda
+A bulleted list of contiguous time blocks fully covering the Duration (4–6 items):
+- 0-5: <block focus>
+- 5-15: <block focus>
+- 15-30: <block focus>
+- 30-45: <block focus>
+
+### FEW-SHOT EXAMPLES (follow these patterns exactly; adapt to the actual tool "text")
+#### Example 1
+
+## Tutoring Plan: Convolution in LTI systems
+
+**Duration.** 45 minutes
+
+**Objectives**
+- Explain the convolution integral and key properties
+- Apply the graphical method to compute y(t)
+
+**Key Concepts (from materials)**
+- Convolution integral y(t)=∫ x(τ)h(t-τ) dτ
+- Commutativity and associativity
+- Flip–shift–multiply–integrate graphical method
+
+**Agenda**
+- 0-5: Orient the student; recall LTI idea and impulse response
+- 5-15: Derive convolution integral; discuss properties
+- 15-30: Walk through rectangular pulse example (graphical)
+- 30-45: Guided practice on a new x(t), h(t); recap takeaways
+
+#### Example 2
+
+## Tutoring Plan: Impulse response and convolution
+
+**Duration.** 60 minutes
+
+**Objectives**
+- Define and interpret impulse response h(t)
+- Relate y(t)=x(t)*h(t) to system behavior
+- Apply convolution properties in examples
+
+**Key Concepts (from materials)**
+- Impulse response h(t) and LTI behavior
+- Output as convolution y(t)=x(t)*h(t)
+- Convolution properties with worked example
+
+**Agenda**
+- 0-10: Orientation; recap LTI and definition of h(t)
+- 10-20: From h(t) to y(t)=x(t)*h(t) with intuition
+- 20-35: Guided worked example using slides (Lecture 3)
+- 35-50: Practice: short problems on h(t) and y(t)
+- 50-60: Recap; checklist of properties and pitfalls
 
 ### VALIDATION CHECKS BEFORE YOU ANSWER
 - Keys are *exactly* as above.
 - The "Duration" string equals the total minutes implied by the "Agenda".
 - "Agenda" blocks are contiguous, strictly increasing, and fully cover the "Duration".
-- All "Key Concepts" and "References (lectures)" are supported by the tool’s "text".
+- All "Key Concepts" are supported by the tool’s "text".
 - You made *exactly one* probe_topic call with intent="material".
 """.strip()
 

@@ -6,8 +6,8 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types
 import asyncio
-from dotenv import load_dotenv
-from agent.agent import get_agent
+from dotenv import load_dotenv, find_dotenv
+from agent.orchestrator import get_agent
 from typing import Dict, Tuple, Optional
 from fastapi import FastAPI, HTTPException, status, Query
 from pydantic import BaseModel
@@ -21,7 +21,7 @@ from typing import Annotated
 from google.adk.memory import InMemoryMemoryService # Import MemoryService
 
 
-load_dotenv()
+load_dotenv(find_dotenv())
 APP_NAME = "tutoring_agent"
 USER_ID = "user_12345"
 SESSION_ID = "session_12345"
@@ -198,7 +198,7 @@ async def test_agent(query: str = Body(..., embed=True)):
 # from google.genai import types
 # import asyncio
 # from dotenv import load_dotenv
-# from agent.agent import get_agent
+# from agent.orchestrator import get_agent
 # from typing import Dict, Tuple, Optional
 # from fastapi import FastAPI, HTTPException, status, Query
 # from pydantic import BaseModel
