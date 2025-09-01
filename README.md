@@ -1,6 +1,60 @@
-## Requirements note
+## Introduction
+
+In this project, I walk you through every step I took to build this multi-agent system. I cover the challenges I faced and how I overcame them, sharing my perspective and the rationale behind each decision. Before implementation, I studied ~20 hours of LangChain, LangGraph, LangSmith, and ADK (including their quickstarts), which shaped the approach. Personally, this project is a milestone for me, turning months of learning into a working, end-to-end assistant. Its added value is immeasurable, and I hope you find it engaging.
+
+## Project Requirements note
 
 In the following project, all the requirements are met. The only thing i did not do is finetuning a small language model.
+
+## How to Run Guide
+
+Here’s a clean, copy-pasteable **Run Guide** you can drop into your README:
+
+### How to Run (4 terminals)
+
+> Ensure dependencies are already installed and your `.env` is configured (see below).
+
+**Terminal 1 — A2A server**
+
+```bash
+cd agents/"multi agent system"/agent
+python A2Aserver.py
+```
+
+**Terminal 2 — MCP server**
+
+```bash
+cd agents/servers
+# credentials.json must be present in this directory
+python mcp_server.py
+```
+
+**Terminal 3 — A2A HTTP app**
+
+```bash
+cd agents/"multi agent system"
+uvicorn main:app --reload --port 8000
+```
+
+**Terminal 4 — Frontend**
+
+```bash
+cd agents/frontend
+streamlit run app.py
+```
+
+### Environment variables (.env)
+
+Create a `.env` file (at the project root or where your processes load env vars) with:
+
+```
+OPENAI_API_KEY=your_openai_key
+GOOGLE_API_KEY=your_google_api_key
+GOOGLE_CSE_ID=your_custom_search_engine_id
+LANGSMITH_API_KEY=your_langsmith_key   # optional
+```
+
+> Note: `credentials.json` for Google APIs must be in `agents/servers/` when running `mcp_server.py`.
 
 ## High-Level Architecture
 
@@ -399,8 +453,34 @@ I want to **note** that this prompt template was not reached from the first shot
 [https://www.youtube.com/watch?v=77Z07QnLlB8](https://www.youtube.com/watch?v=77Z07QnLlB8)
 
 ---
+## Sample Outputs
 
-## Whats next
+### Exersise generated:
+
+<img width="350" height="600" alt="Screenshot 2025-08-23 170957" src="https://github.com/user-attachments/assets/f1a6be6f-ebcd-4ec3-87cb-fbdceb3e0605" />
+
+
+### Concept explained:
+
+<img width="450" height="375" alt="Screenshot 2025-08-23 171017" src="https://github.com/user-attachments/assets/4f9695b8-6c90-4de4-9e71-2c37d3e7ad0d" />
+
+
+### Plan organized:
+
+<img width="500" height="300" alt="Screenshot 2025-08-23 171026" src="https://github.com/user-attachments/assets/7f9c591d-a706-46fe-a367-b390c9bc209b" />
+
+
+### Memory Issue:
+
+<img width="600" height="500" alt="Screenshot 2025-08-24 173847" src="https://github.com/user-attachments/assets/863d78bd-67d7-4239-af3c-719c2006ea3a" />
+
+
+---
+## Final Note
+
+I want to note that in case you tryout running the agent using adk web, you will notice that every function is working properly since the memory element is not lost there.
+
+### Whats next
 
 1. fix the memory issue
 2. refine the prompt of the orchestrator
